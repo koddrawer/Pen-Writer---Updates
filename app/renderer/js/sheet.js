@@ -21,13 +21,13 @@ export class Sheet {
       roughnessMap: rep(tex.rough), normalScale: new THREE.Vector2(0.35, 0.35) });
     this.mat = mat;
     const U = this.uniforms = { inkMap: { value: this.tex }, grainAmt: { value: grain }, offs: { value: new THREE.Vector2(Math.random(), Math.random()) },
-      glowRect: { value: new THREE.Vector4(0, 0, 0, 0) }, glowT: { value: -1 }, glowCol: { value: new THREE.Color('#ffc94a') }, glowAmt: { value: 1 } };
+      glowRect: { value: new THREE.Vector4(0, 0, 0, 0) }, glowT: { value: -1 }, bloomOnly: { value: 0 }, glowCol: { value: new THREE.Color('#ffc94a') }, glowAmt: { value: 1 } };
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U);
       sh.vertexShader = 'varying vec2 vInkUv;\nuniform vec2 offs;\n' + sh.vertexShader
         .replace('#include <uv_vertex>', '#include <uv_vertex>\n vInkUv = uv;');
       sh.fragmentShader = 'uniform sampler2D inkMap; varying vec2 vInkUv; uniform float grainAmt;\n' +
-        'uniform vec4 glowRect; uniform float glowT; uniform vec3 glowCol; uniform float glowAmt; vec3 vGlowE = vec3(0.0); float inkA = 0.0;\n' + sh.fragmentShader
+        'uniform float bloomOnly; uniform vec4 glowRect; uniform float glowT; uniform vec3 glowCol; uniform float glowAmt; vec3 vGlowE = vec3(0.0); float inkA = 0.0;\n' + sh.fragmentShader
         .replace('#include <map_fragment>', `#include <map_fragment>
           vec4 inkS = texture2D(inkMap, vInkUv);
           float lum = dot(diffuseColor.rgb, vec3(0.333));
@@ -48,6 +48,8 @@ export class Sheet {
         .replace('#include <aomap_fragment>', `float inkK = 1.0 - 0.9 * clamp(inkA, 0.0, 1.0);
           reflectedLight.directSpecular *= inkK; reflectedLight.indirectSpecular *= inkK;
           #include <aomap_fragment>`)
+        .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+          if (bloomOnly > 0.5) gl_FragColor = vec4(vGlowE, 1.0);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
           totalEmissiveRadiance += vGlowE;`)
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>

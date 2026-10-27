@@ -6,6 +6,7 @@ import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from '../lib/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from '../lib/addons/postprocessing/ShaderPass.js';
 import { Desk } from './desk.js';
 import { Writer } from './writer.js';
 import { loadChain } from './text.js';
@@ -37,11 +38,24 @@ const camera = new THREE.PerspectiveCamera(20, 9 / 16, 0.02, 40);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = 0.08; controls.screenSpacePanning = true;
 
+// bloom chọn lọc: chỉ chữ ánh vàng trên giấy toả sáng (các vật khác – nắp bút kim loại… – bị che đen khi tính bloom)
+const bloomComposer = new EffectComposer(renderer);
+bloomComposer.renderToScreen = false;
+bloomComposer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 0.15);
+bloomComposer.addPass(bloom);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 1.4);
-composer.addPass(bloom);
+const mixPass = new ShaderPass(new THREE.ShaderMaterial({
+  uniforms: { baseTexture: { value: null }, bloomTexture: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { gl_FragColor = texture2D(baseTexture, vUv) + vec4(texture2D(bloomTexture, vUv).rgb, 0.0); }',
+}), 'baseTexture');
+mixPass.needsSwap = true;
+composer.addPass(mixPass);
 composer.addPass(new OutputPass());
+const darkMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const BLACK = new THREE.Color(0);
 
 // ---------- bàn viết
 const bar = $('bar').firstElementChild;
@@ -98,7 +112,7 @@ function resize() {
   document.body.classList.toggle('rot', +cfg.display.rotate === -90);
   document.body.classList.toggle('rotR', +cfg.display.rotate === 90);
   const w = rot ? window.innerHeight : window.innerWidth, h = rot ? window.innerWidth : window.innerHeight;
-  renderer.setSize(w, h, false); composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
+  renderer.setSize(w, h, false); for (const c of [composer, bloomComposer]) { c.setPixelRatio(renderer.getPixelRatio()); c.setSize(w, h); }
   bloom.resolution.set(Math.round(w / 2), Math.round(h / 2));
   camera.aspect = w / h; camera.updateProjectionMatrix();
 }
@@ -181,7 +195,21 @@ function followPen(dt) {
   followOff.add(d); camera.position.add(d); controls.target.add(d);
 }
 // bloom chỉ chạy khi có chữ đang ánh vàng (nhẹ máy, không làm loang sáng nét mực)
-function render() { if (bloom.strength > 0.001 && desk.sheets.some(s => s.glowBox)) composer.render(); else renderer.render(scene, camera); }
+const sheetMeshes = new Set(desk.sheets.map(s => s.mesh)); const saved = new Map();
+function render() {
+  if (!(bloom.strength > 0.001 && desk.sheets.some(s => s.glowBox))) { renderer.render(scene, camera); return; }
+  // lượt 1: chỉ giữ tờ giấy, mọi vật khác sơn đen (vẫn che khuất chữ đúng chỗ), tắt bụi + nền
+  scene.traverse(o => { if (o.isMesh && !sheetMeshes.has(o)) { saved.set(o, o.material); o.material = darkMat; } });
+  const bg = scene.background, dv = dust.points.visible; scene.background = BLACK; dust.points.visible = false;
+  for (const sh of desk.sheets) sh.uniforms.bloomOnly.value = 1;
+  bloomComposer.render();
+  for (const sh of desk.sheets) sh.uniforms.bloomOnly.value = 0;
+  mixPass.uniforms.bloomTexture.value = bloom.renderTargetsHorizontal[0].texture;   // chỉ phần quầng sáng
+  for (const [o, m] of saved) o.material = m; saved.clear();
+  scene.background = bg; dust.points.visible = dv;
+  // lượt 2: cảnh thường + cộng quầng sáng
+  composer.render();
+}
 
 // ---------- vòng lặp
 const clock = new THREE.Clock();
