@@ -11,6 +11,7 @@ import { Writer } from './writer.js';
 import { loadChain } from './text.js';
 import { Music } from './music.js';
 import { Voice } from './voice.js';
+import { Dust } from './dust.js';
 
 const api = window.api;
 const $ = (id) => document.getElementById(id);
@@ -60,6 +61,8 @@ const lampPos = new THREE.Vector3(0.6, 0.69, -0.08);
 const lamp = new THREE.PointLight(0xffb36b, 0.5, 2.2, 2); lamp.position.copy(lampPos);
 const fill = new THREE.DirectionalLight(0xffd9b0, 0.35); fill.position.copy(focus).add(new THREE.Vector3(0.4, 1.4, 1.6)); fill.target.position.copy(focus);
 scene.add(sun, sun.target, hemi, lamp, fill, fill.target);
+// ---- hạt bụi lơ lửng
+const dust = new Dust(scene, { center: desk.sheetCenter, sunDir });
 
 // ---- camera
 const DEFAULT_CAMS = { main: { ...meta.camera } };
@@ -84,6 +87,7 @@ function applyDisplayCfg() {
   renderer.toneMappingExposure = d.exposure ?? 1;
   bloom.strength = d.bloom ?? 0.35;
   $('vig').style.opacity = String(d.vignette ?? 0.45);
+  dust.set(d.dust || {});
   controls.enabled = d.mouseCamera !== false && !rotated();   // xoay khung: chỉnh camera ở chế độ thường
   document.body.classList.toggle('drag', !!d.dragWindow);
 }
@@ -186,6 +190,7 @@ function frame() {
   const raw = clock.getDelta(); const dt = Math.min(raw, 0.1);
   writer.tick(Math.min(raw, 0.25));   // máy yếu/khựng: bút vẫn viết đúng tốc độ
   desk.update(dt, performance.now());
+  dust.update(dt, camera, renderer.domElement.height);
   if (tween) {
     tween.t += dt; const u = Math.min(1, tween.t / tween.T), e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
     camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e);
@@ -201,7 +206,7 @@ function frame() {
 if (!window.__manual) renderer.setAnimationLoop(frame);
 
 // tiện cho kiểm thử
-window.__pw = { desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, applyCam,
+window.__pw = { dust, desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, applyCam,
   async sim(sec, dt = 1 / 30) {
     const sl = (ms) => new Promise(r => setTimeout(r, ms)); const n = Math.round(sec / dt);
     for (let i = 0; i < n; i++) {

@@ -1,6 +1,6 @@
 {
-  "version": "1.2.1",
+  "version": "1.3.0",
   "minShell": "1.0.0",
-  "notes": "Sửa lỗi kết nối TikTok: nạp thư viện tiktok-live-connector (ES Module) bằng import động",
+  "notes": "Thêm hiệu ứng hạt bụi lơ lửng bắt nắng (chỉnh số hạt, cỡ, độ sáng, tốc độ trong tab Hiển thị & Camera)",
   "date": "2026-10-27"
 }

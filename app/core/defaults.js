@@ -108,6 +108,7 @@ module.exports = {
     shadows: true, bloom: 0.35, exposure: 1.0, sun: 1, ambient: 1, lamp: true, vignette: 0.45,
     mouseCamera: true, followPen: 0, cameras: {}, dragWindow: false,
     penPark: { u: 0.1, v: 0.9, h: 0.04 },
+    dust: { enabled: true, count: 320, size: 1, brightness: 1, speed: 1 },
   },
   update: { owner: 'koddrawer', repo: 'Pen-Writer---Updates', branch: 'main', autoCheck: true, intervalMin: 30 },
   windows: {},
