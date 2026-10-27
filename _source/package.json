@@ -1,0 +1,60 @@
+{
+  "name": "pen-writer",
+  "version": "1.0.1",
+  "description": "Bút viết tên người tặng quà cho TikTok LIVE",
+  "main": "shell/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "publish-update": "node tools/publish-update.js"
+  },
+  "author": "koddrawer",
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "tiktok-live-connector": "^2.5.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "productName": "Pen Writer",
+  "build": {
+    "appId": "com.koddrawer.penwriter",
+    "productName": "Pen Writer",
+    "asar": false,
+    "files": [
+      "shell/**",
+      "app/**",
+      "package.json",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "PenWriter-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "shortcutName": "Pen Writer",
+      "artifactName": "PenWriter-Setup-${version}.${ext}"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

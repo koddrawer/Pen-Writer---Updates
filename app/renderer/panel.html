@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Pen Writer - Bảng điều khiển</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' app: media:; img-src 'self' app: media: data: blob:; media-src app: media:; font-src 'self' app: media: data:; style-src 'self' 'unsafe-inline'; script-src 'self' app: 'unsafe-inline'">
+<link rel="stylesheet" href="./panel.css">
+<style id="fontfaces"></style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="cog">✒</span><div><b>PEN WRITER</b><small id="ver">v—</small></div></div>
+  <div class="hstat">
+    <span class="pill" id="pTik">TikTok: —</span>
+    <span class="pill" id="pWrite">Bút: —</span>
+  </div>
+</header>
+<nav id="tabs">
+  <button data-tab="home" class="on">Tổng quan</button>
+  <button data-tab="tiers">Mức donate &amp; Chữ</button>
+  <button data-tab="viewers">Người xem &amp; Quote</button>
+  <button data-tab="paper">Giấy &amp; Ánh vàng</button>
+  <button data-tab="sound">Nhạc nền &amp; Voice</button>
+  <button data-tab="fonts">Font chữ</button>
+  <button data-tab="display">Hiển thị &amp; Camera</button>
+  <button data-tab="update">Cập nhật</button>
+</nav>
+<main>
+  <section id="tab-home" class="tab on"></section>
+  <section id="tab-tiers" class="tab"></section>
+  <section id="tab-viewers" class="tab"></section>
+  <section id="tab-paper" class="tab"></section>
+  <section id="tab-sound" class="tab"></section>
+  <section id="tab-fonts" class="tab"></section>
+  <section id="tab-display" class="tab"></section>
+  <section id="tab-update" class="tab"></section>
+</main>
+<div id="toast"></div>
+<script type="module" src="./js/panel.js"></script>
+</body>
+</html>

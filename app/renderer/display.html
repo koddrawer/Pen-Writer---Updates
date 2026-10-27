@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Pen Writer – Màn hiển thị</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' app: media: blob: data:; script-src 'self' app: 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' app: media: blob: data:; media-src 'self' app: media: blob: data:; connect-src 'self' app: media: blob: data:; font-src 'self' app: media: data:">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0907; }
+  #c { display: block; width: 100vw; height: 100vh; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; color: #e2c486; font: 600 15px/1.4 system-ui, sans-serif;
+    background: radial-gradient(circle at 50% 40%, #2a2017, #0b0907); transition: opacity .6s; letter-spacing: .06em; text-align: center; }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  #bar { width: 52vw; height: 4px; background: #3a2c1c; margin: 12px auto 0; border-radius: 2px; overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0; background: #e2c486; transition: width .2s; }
+  #err { position: fixed; left: 8px; bottom: 8px; right: 8px; color: #ff8a7a; font: 12px monospace; white-space: pre-wrap; }
+  body.drag #c { -webkit-app-region: drag; }
+  #vig { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 80% 72% at 50% 48%, rgba(0,0,0,0) 55%, rgba(0,0,0,.5) 84%, rgba(0,0,0,.85) 100%); }
+</style>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vig"></div>
+<audio id="mus1" preload="auto"></audio><audio id="mus2" preload="auto"></audio>
+<div id="loading"><div>ĐANG CHUẨN BỊ BÀN VIẾT…<div id="bar"><i></i></div></div></div>
+<div id="err"></div>
+<script type="module" src="./js/display.js"></script>
+</body>
+</html>
