@@ -88,15 +88,18 @@ module.exports = async function start(ctx) {
   }
   function createDisplay() {
     const d = cfg.display; const b = wcfg('display');
+    const rot = [90, -90].includes(+d.rotate);
     const win = new BrowserWindow({
-      width: d.width, height: d.height, useContentSize: true, frame: !d.frameless, resizable: true, title: 'Pen Writer - Display',
+      width: rot ? d.height : d.width, height: rot ? d.width : d.height, useContentSize: true, frame: !d.frameless, resizable: true, title: 'Pen Writer - Display',
       backgroundColor: '#0b0907', alwaysOnTop: !!d.alwaysOnTop, show: false, autoHideMenuBar: true,
       ...(onScreen(b) ? { x: b.x, y: b.y } : {}),
       webPreferences: { preload, contextIsolation: true, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
     });
-    win.setAspectRatio(9 / 16);
+    win.setAspectRatio(rot ? 16 / 9 : 9 / 16);
     win.setMenu(null);
     win.loadURL('app://local/renderer/display.html');
+    // đảm bảo đúng kích thước nội dung (Windows có thể co cửa sổ khi tạo)
+    win.once('ready-to-show', () => { const [cw, ch] = win.getContentSize(); const tw = rot ? d.height : d.width, th = rot ? d.width : d.height; if (cw !== tw || ch !== th) { win.setAspectRatio(0); win.setContentSize(tw, th); win.setAspectRatio(rot ? 16 / 9 : 9 / 16); } });
     win.once('ready-to-show', () => win.show());
     remember('display', win);
     win.on('closed', () => { W.display = null; });
@@ -200,7 +203,9 @@ module.exports = async function start(ctx) {
     'tiktok:status': () => tiktok.status,
     'log:get': () => log,
     'win:show': () => { if (!W.display) createDisplay(); else { W.display.show(); W.display.focus(); } },
-    'win:displaySize': (w, h) => { if (!W.display) return; W.display.setAspectRatio(0); W.display.setContentSize(w, h); W.display.setAspectRatio(9 / 16); setCfg({ display: { width: w, height: h } }, { silent: true }); },
+    'win:displaySize': (w, h) => { if (!W.display) return; const rot = [90, -90].includes(+cfg.display.rotate); W.display.setAspectRatio(0); W.display.setContentSize(rot ? h : w, rot ? w : h); W.display.setAspectRatio(rot ? 16 / 9 : 9 / 16); setCfg({ display: { width: w, height: h } }, { silent: true });
+      const [cw, ch] = W.display.getContentSize(); return { w: cw, h: ch }; },
+    'win:setRotate': (deg) => { setCfg({ display: { rotate: +deg || 0 } }); if (W.display) { W.display.destroy(); W.display = null; } createDisplay(); },
     'win:recreateDisplay': () => { if (W.display) { W.display.destroy(); W.display = null; } createDisplay(); },
     'display:cmd': (m) => toDisplay('display:cmd', m),
     'fonts:add': async () => {

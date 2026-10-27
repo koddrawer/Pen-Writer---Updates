@@ -352,7 +352,16 @@ function renderFonts() {
 function renderDisplay() {
   $('#tab-display').replaceChildren(h('div', { class: 'grid' },
     card('Cửa sổ hiển thị 9:16',
-      h('div', { class: 'btns' }, ...[[405, 720], [540, 960], [720, 1280], [1080, 1920]].map(([w, hh]) => btn(`${w}×${hh}`, () => api.invoke('win:displaySize', w, hh), 'sm'))),
+      note('Khung hình xuất ra LIVE phải đúng độ phân giải của LIVE Studio (thường 1080×1920). Cửa sổ nhỏ hơn thì LIVE Studio phải phóng to lên → bị mờ.'),
+      h('div', { class: 'btns' }, ...[[540, 960], [720, 1280], [1080, 1920]].map(([w, hh]) => btn(`${w}×${hh}`, async () => {
+        const r = await api.invoke('win:displaySize', w, hh);
+        const rot = [90, -90].includes(+cfg.display.rotate); const want = rot ? [hh, w] : [w, hh];
+        if (r && (r.w < want[0] - 2 || r.h < want[1] - 2)) toast(`Màn hình không đủ chỗ: cửa sổ chỉ được ${r.w}×${r.h}. Hãy bật "Xoay khung 90°" để có 1080×1920 trên màn Full HD.`);
+        else toast(`Cửa sổ hiển thị: ${want[0]}×${want[1]}`);
+      }, 'sm'))),
+      row('Xoay khung 90°', control(() => +cfg.display.rotate || 0, (v) => api.invoke('win:setRotate', +v), 'select', { options: [[0, 'Không xoay (cửa sổ dọc 9:16)'], [-90, 'Xoay trái (cửa sổ ngang 16:9)'], [90, 'Xoay phải (cửa sổ ngang 16:9)']] }),
+        'Màn hình 1920×1080 không chứa nổi cửa sổ dọc 1080×1920. Xoay khung thì cửa sổ thành 1920×1080, trong LIVE Studio xoay nguồn lại 90° là được hình 1080×1920 sắc nét'),
+      note('Màn Full HD: chọn 1080×1920 + Xoay trái → trong LIVE Studio chuột phải nguồn Window capture → Xoay 90° theo chiều kim đồng hồ (xoay phải thì chọn ngược chiều) → kéo vừa khung. Khi xoay, chỉnh camera bằng chuột tạm tắt.'),
       field('display.frameless', 'Ẩn khung cửa sổ', 'bool', { tip: 'Áp dụng khi tải lại màn hiển thị' }),
       field('display.alwaysOnTop', 'Luôn nằm trên', 'bool'),
       field('display.dragWindow', 'Kéo cửa sổ bằng chuột (tắt xoay camera)', 'bool'),

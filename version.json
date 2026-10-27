@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "minShell": "1.0.0",
-  "notes": "Viết tên người xem nối tiếp trên một dòng (chỉnh cỡ chữ), viết quote tiếng Việt/tiếng Anh khi rảnh, đổi repo cập nhật sang Pen-Writer---Updates",
+  "notes": "Sửa mờ trên LIVE Studio: thêm chế độ xoay khung 90° để xuất 1080×1920 sắc nét trên màn hình Full HD, báo khi cửa sổ không đủ cỡ",
   "date": "2026-10-27"
 }

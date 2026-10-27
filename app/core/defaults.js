@@ -104,7 +104,7 @@ module.exports = {
   },
   music: { enabled: true, files: [], shuffle: true, volume: 0.35, crossfadeSec: 3, duck: true, duckPct: 30, duckCats: ['voice'] },
   display: {
-    width: 540, height: 960, frameless: false, alwaysOnTop: false, renderScale: 1,
+    width: 540, height: 960, rotate: 0, frameless: false, alwaysOnTop: false, renderScale: 1,
     shadows: true, bloom: 0.35, exposure: 1.0, sun: 1, ambient: 1, lamp: true, vignette: 0.45,
     mouseCamera: true, followPen: 0, cameras: {}, dragWindow: false,
     penPark: { u: 0.1, v: 0.9, h: 0.04 },

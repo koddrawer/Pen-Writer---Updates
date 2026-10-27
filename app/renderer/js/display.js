@@ -84,11 +84,16 @@ function applyDisplayCfg() {
   renderer.toneMappingExposure = d.exposure ?? 1;
   bloom.strength = d.bloom ?? 0.35;
   $('vig').style.opacity = String(d.vignette ?? 0.45);
-  controls.enabled = d.mouseCamera !== false;
+  controls.enabled = d.mouseCamera !== false && !rotated();   // xoay khung: chỉnh camera ở chế độ thường
   document.body.classList.toggle('drag', !!d.dragWindow);
 }
+// xoay 90°: cửa sổ ngang 16:9 chứa khung dọc 9:16 (để màn hình Full HD vẫn xuất được 1080×1920 sắc nét)
+const rotated = () => [90, -90].includes(+cfg.display.rotate);
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const rot = rotated();
+  document.body.classList.toggle('rot', +cfg.display.rotate === -90);
+  document.body.classList.toggle('rotR', +cfg.display.rotate === 90);
+  const w = rot ? window.innerHeight : window.innerWidth, h = rot ? window.innerWidth : window.innerHeight;
   renderer.setSize(w, h, false); composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
   bloom.resolution.set(Math.round(w / 2), Math.round(h / 2));
   camera.aspect = w / h; camera.updateProjectionMatrix();
