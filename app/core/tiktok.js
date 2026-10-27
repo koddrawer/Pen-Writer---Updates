@@ -1,4 +1,15 @@
 // Kết nối TikTok LIVE (tiktok-live-connector) + chuẩn hoá sự kiện, tự kết nối lại.
+// tiktok-live-connector 2.x là ES Module: Electron 33 không require() được -> nạp bằng import() động
+let libP = null;
+function loadLib(req) {
+  if (!libP) libP = (async () => {
+    try { return req('tiktok-live-connector'); } catch (e) { if (e.code !== 'ERR_REQUIRE_ESM' && !/ES Module/i.test(e.message)) throw e; }
+    const { pathToFileURL } = require('url');
+    const m = await import(pathToFileURL(req.resolve('tiktok-live-connector')).href);
+    return m.TikTokLiveConnection ? m : (m.default || m);
+  })().catch(e => { libP = null; throw e; });
+  return libP;
+}
 class TikTok {
   constructor(req, getCfg, on) {
     this.req = req; this.cfg = getCfg; this.on = on;
@@ -16,7 +27,7 @@ class TikTok {
     await this.disconnect(true);
     this.manual = false; this.username = username;
     let lib;
-    try { lib = this.req('tiktok-live-connector'); } catch (e) { this.set({ state: 'error', message: 'Thiếu thư viện tiktok-live-connector: ' + e.message }); return false; }
+    try { lib = await loadLib(this.req); } catch (e) { this.set({ state: 'error', message: 'Thiếu thư viện tiktok-live-connector: ' + e.message }); return false; }
     const { TikTokLiveConnection, WebcastEvent, ControlEvent } = lib;
     const key = this.cfg().tiktok.signApiKey;
     const conn = new TikTokLiveConnection(username, { ...(key ? { signApiKey: key } : {}), enableExtendedGiftInfo: true, processInitialData: false });

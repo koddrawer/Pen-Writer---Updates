@@ -35,6 +35,7 @@ for (const f of ['package.json', 'package-lock.json', 'README.md', '.gitignore']
 if (process.env.NO_PUSH) { console.log('Đã chép v' + v.version + ' (không push)'); process.exit(0); }
 const run = (cmd) => execSync(cmd, { cwd: repoDir, stdio: 'inherit' });
 run('git add -A');
-run(`git commit -m "v${v.version}${notes ? ': ' + notes.replace(/"/g, "'") : ''}"`);
+const msg = `v${v.version}${notes ? ': ' + notes : ''}` + (process.env.COMMIT_TRAILER ? '\n\n' + process.env.COMMIT_TRAILER : '');
+execSync('git commit -F -', { cwd: repoDir, input: msg, stdio: ['pipe', 'inherit', 'inherit'] });
 run('git push');
 console.log(`\n✔ Đã đẩy v${v.version}. Các máy đang chạy app sẽ nhận bản mới ở lần kiểm tra kế tiếp.`);
