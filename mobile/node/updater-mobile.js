@@ -37,6 +37,7 @@ class MobileUpdater {
     try {
       this.set({ state: 'checking', message: 'Đang kiểm tra cập nhật…' });
       const rv = await this.remoteVersion();
+      if (!rv || !rv.version) throw new Error((rv && rv.message) || 'không đọc được version.json');
       if (cmp(rv.version, this.running.version) <= 0) { this.set({ state: 'uptodate', message: `Đang dùng bản mới nhất (v${this.running.version})` }); return this.status; }
       if (readJson(path.join(this.dir, 'bad.json'), []).includes(rv.version)) { this.set({ state: 'error', message: `Bản v${rv.version} đã bị gỡ vì khởi động lỗi – chờ bản sau.` }); return this.status; }
       if (rv.minAndroid && cmp(this.shellVersion, rv.minAndroid) < 0) { this.set({ state: 'error', message: `Bản v${rv.version} cần cài APK mới (≥ ${rv.minAndroid}). Tải ở mục Releases của repo.` }); return this.status; }
