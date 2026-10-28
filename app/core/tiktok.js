@@ -30,7 +30,7 @@ class TikTok {
     try { lib = await loadLib(this.req); } catch (e) { this.set({ state: 'error', message: 'Thiếu thư viện tiktok-live-connector: ' + e.message }); return false; }
     const { TikTokLiveConnection, WebcastEvent, ControlEvent } = lib;
     const key = this.cfg().tiktok.signApiKey;
-    const conn = new TikTokLiveConnection(username, { ...(key ? { signApiKey: key } : {}), enableExtendedGiftInfo: true, processInitialData: false });
+    const conn = new TikTokLiveConnection(username, { ...(key ? { signApiKey: key } : {}), enableExtendedGiftInfo: false, processInitialData: false });
     this.conn = conn;
     this.set({ state: 'connecting', message: `Đang kết nối @${username}…`, username });
     const E = WebcastEvent || {}; const C = ControlEvent || {};
@@ -64,7 +64,12 @@ class TikTok {
       return true;
     } catch (e) {
       const msg = (e && e.message) || String(e);
-      this.set({ state: 'error', message: /offline|not.*live|UserOffline/i.test(msg) ? `@${username} đang không live` : 'Lỗi: ' + msg.slice(0, 160) });
+      const why = /offline|not.*live|UserOffline/i.test(msg) ? `@${username} đang không live`
+        : /Business plan|PremiumFeature|requires a .* plan/i.test(msg) ? 'Máy chủ ký Euler từ chối (tính năng trả phí). Thử lại sau ít phút hoặc nhập Euler API key.'
+        : /rate.?limit|429/i.test(msg) ? 'Máy chủ ký Euler đang giới hạn lượt (gói miễn phí). Chờ chút rồi thử lại hoặc nhập Euler API key.'
+        : /Room ID/i.test(msg) ? `Không lấy được phòng live của @${username} – kiểm tra tài khoản đang LIVE và đúng username`
+        : 'Lỗi: ' + msg.slice(0, 160);
+      this.set({ state: 'error', message: why });
       this.on.log('err', 'Kết nối thất bại: ' + msg.slice(0, 200));
       if (!this.manual) this.schedule();
       return false;
