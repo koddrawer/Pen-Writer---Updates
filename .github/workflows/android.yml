@@ -51,7 +51,8 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          set -o pipefail
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee ../../build.log
           mkdir -p ../../out
           cp app/build/outputs/apk/release/*.apk ../../out/PenWriter.apk
           cp ../../out/PenWriter.apk "../../out/PenWriter-${{ steps.v.outputs.name }}.apk"
@@ -72,3 +73,12 @@ jobs:
           files: |
             out/PenWriter.apk
             out/PenWriter-${{ steps.v.outputs.name }}.apk
+      - name: Lưu nhật ký lỗi (công khai để đọc khi build hỏng)
+        if: failure()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ci-log
+          name: Nhật ký build lỗi gần nhất
+          prerelease: true
+          make_latest: false
+          files: build.log
