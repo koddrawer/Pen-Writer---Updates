@@ -35,20 +35,12 @@ class TikTok {
     this.set({ state: 'connecting', message: `Đang kết nối @${username}…`, username });
     const E = WebcastEvent || {}; const C = ControlEvent || {};
     conn.on(E.MEMBER || 'member', d => { const u = this.user(d); this.on.log('join', `${u.nickname || u.uniqueId} vào phòng`); this.on.join(u); });
-    conn.on(E.CHAT || 'chat', d => { const u = this.user(d); this.on.log('chat', `${u.nickname || u.uniqueId}: ${d.comment}`); this.on.chat(u, d.comment); });
+    conn.on(E.CHAT || 'chat', d => { const u = this.user(d); const t = d.content ?? d.comment ?? ''; this.on.log('chat', `${u.nickname || u.uniqueId}: ${t}`); this.on.chat(u, t); });
     conn.on(E.FOLLOW || 'follow', d => { const u = this.user(d); this.on.log('follow', `${u.nickname || u.uniqueId} theo dõi`); this.on.follow(u); });
     conn.on(E.SHARE || 'share', d => { const u = this.user(d); this.on.share(u); });
-    conn.on(E.LIKE || 'like', d => { const u = this.user(d); this.on.like(u, d.likeCount || d.count || 1); });
-    conn.on(E.ROOM_USER || 'roomUser', d => { if (d.viewerCount != null) this.set({ viewers: d.viewerCount }); });
-    conn.on(E.GIFT || 'gift', d => {
-      const det = d.giftDetails || {}; const ext = d.extendedGiftInfo || {};
-      const giftType = det.giftType ?? d.giftType;
-      if (giftType === 1 && !d.repeatEnd) return;          // đang combo, chờ kết thúc
-      const g = { user: this.user(d), gift: det.giftName || ext.name || d.giftName || ('Gift#' + (d.giftId || '')),
-        count: d.repeatCount || 1, diamonds: det.diamondCount ?? ext.diamond_count ?? d.diamondCount ?? 0 };
-      this.on.log('gift', `${g.user.nickname || g.user.uniqueId} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`);
-      this.on.gift(g);
-    });
+    conn.on(E.LIKE || 'like', d => { const u = this.user(d); this.on.like(u, d.count || d.likeCount || 1); });
+    conn.on(E.ROOM_USER || 'roomUser', d => { const v = d.total ?? d.viewerCount; if (v != null) this.set({ viewers: +v || 0 }); });
+    conn.on(E.GIFT || 'gift', d => this.onGift(d));
     conn.on(E.STREAM_END || 'streamEnd', () => { this.on.log('sys', 'Phiên live đã kết thúc'); this.set({ state: 'disconnected', message: 'Live đã kết thúc' }); this.schedule(30000); });
     conn.on(C.DISCONNECTED || 'disconnected', (info) => {
       if (this.conn !== conn) return;
@@ -74,6 +66,30 @@ class TikTok {
       if (!this.manual) this.schedule();
       return false;
     }
+  }
+  // Quà: thư viện 2.x (schema v3) để thông tin quà ở d.gift { name, diamondCount, type, combo }; bản cũ ở d.giftDetails
+  onGift(d) {
+    const gi = d.gift || {}, det = d.giftDetails || {}, ext = d.extendedGiftInfo || {};
+    const name = gi.name || det.giftName || ext.name || d.giftName || ('Gift#' + (d.giftId || gi.id || ''));
+    const diamonds = +(gi.diamondCount ?? det.diamondCount ?? ext.diamond_count ?? d.diamondCount ?? 0) || 0;
+    const streak = gi.type === 1 || gi.combo === true || det.giftType === 1 || d.giftType === 1;
+    const u = this.user(d);
+    const count = +(d.repeatCount || d.comboCount || 1) || 1;
+    const emit = (cnt) => {
+      const g = { user: u, gift: name, count: cnt, diamonds };
+      this.on.log('gift', `${u.nickname || u.uniqueId} tặng ${name} x${cnt} (${diamonds * cnt} xu)`);
+      this.on.gift(g);
+    };
+    if (!streak) return emit(count);
+    // quà combo (hoa hồng…): chờ kết thúc chuỗi rồi mới tính 1 lần; TikTok không gửi tín hiệu kết thúc thì tự chốt sau 3 giây
+    this.streaks = this.streaks || new Map();
+    const key = (u.uniqueId || u.nickname) + '|' + (d.giftId || gi.id || name) + '|' + (d.groupId || '');
+    const cur = this.streaks.get(key) || { count: 0 };
+    clearTimeout(cur.t);
+    cur.count = Math.max(cur.count, count);
+    if (d.repeatEnd) { this.streaks.delete(key); return emit(cur.count); }
+    cur.t = setTimeout(() => { this.streaks.delete(key); emit(cur.count); }, 3000);
+    this.streaks.set(key, cur);
   }
   schedule(ms) {
     if (!this.cfg().tiktok.autoReconnect || this.manual) return;
