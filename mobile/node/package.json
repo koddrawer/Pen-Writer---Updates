@@ -1,0 +1,14 @@
+{
+  "name": "pen-writer-node",
+  "version": "1.0.0",
+  "shellVersion": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "tiktok-live-connector": "2.5.0"
+  },
+  "overrides": {
+    "got": "13.0.0"
+  }
+}

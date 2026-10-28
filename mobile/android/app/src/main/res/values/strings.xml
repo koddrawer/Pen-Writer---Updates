@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pen Writer</string>
+    <string name="title_activity_main">Pen Writer</string>
+    <string name="package_name">com.koddrawer.penwriter</string>
+    <string name="custom_url_scheme">com.koddrawer.penwriter</string>
+</resources>

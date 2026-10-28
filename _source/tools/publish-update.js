@@ -21,6 +21,8 @@ if (/^\d+\.\d+\.\d+$/.test(bump)) [a, b, c] = bump.split('.').map(Number);
 else if (bump === 'major') { a++; b = 0; c = 0; } else if (bump === 'minor') { b++; c = 0; } else if (bump !== 'same') c++;
 v.version = `${a}.${b}.${c}`; v.notes = notes || v.notes; v.date = new Date().toISOString().slice(0, 10);
 v.minShell = v.minShell || require(path.join(root, 'package.json')).version;
+// bản Android: APK tối thiểu để chạy được bản này (tăng khi đổi phần native / main.js / thư viện npm của lõi Node)
+if (fs.existsSync(path.join(root, 'mobile'))) v.minAndroid = process.env.MIN_ANDROID || v.minAndroid || '1.0.0';
 fs.writeFileSync(vf, JSON.stringify(v, null, 2));
 
 const cp = (src, dst) => { fs.rmSync(dst, { recursive: true, force: true }); fs.cpSync(src, dst, { recursive: true }); };
@@ -31,6 +33,16 @@ const S = path.join(repoDir, '_source');
 fs.mkdirSync(S, { recursive: true });
 for (const f of ['shell', 'tools', '.github']) if (fs.existsSync(path.join(root, f))) cp(path.join(root, f), path.join(S, f));
 for (const f of ['package.json', 'package-lock.json', 'README.md', '.gitignore']) if (fs.existsSync(path.join(root, f))) fs.copyFileSync(path.join(root, f), path.join(S, f));
+
+// bản Android (mobile/): mã nguồn + workflow build APK trên GitHub Actions
+const M = path.join(root, 'mobile');
+if (fs.existsSync(M)) {
+  const skip = /(^|\/)(node_modules|www|build|\.gradle|\.idea|local\.properties|capacitor-cordova-android-plugins)(\/|$)|android\/app\/src\/main\/assets\/(public|capacitor\.(config|plugins)\.json)/;
+  fs.rmSync(path.join(repoDir, 'mobile'), { recursive: true, force: true });
+  fs.cpSync(M, path.join(repoDir, 'mobile'), { recursive: true, filter: (src) => !skip.test(path.relative(M, src).split(path.sep).join('/')) });
+  const wf = path.join(M, 'ci', 'android.yml');
+  if (fs.existsSync(wf)) { fs.mkdirSync(path.join(repoDir, '.github', 'workflows'), { recursive: true }); fs.copyFileSync(wf, path.join(repoDir, '.github', 'workflows', 'android.yml')); }
+}
 
 if (process.env.NO_PUSH) { console.log('Đã chép v' + v.version + ' (không push)'); process.exit(0); }
 const run = (cmd) => execSync(cmd, { cwd: repoDir, stdio: 'inherit' });

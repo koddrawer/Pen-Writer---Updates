@@ -1,0 +1,7 @@
+{
+  "appId": "com.koddrawer.penwriter",
+  "appName": "Pen Writer",
+  "webDir": "www",
+  "android": { "allowMixedContent": true, "backgroundColor": "#0b0907" },
+  "plugins": { "Nodejs": { "nodeDir": "nodejs", "startMode": "auto" } }
+}

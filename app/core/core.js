@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { Readable } = require('stream');
 const DEFAULTS = require('./defaults.js');
+const { deepMerge, migrateConfig } = require('./shared.js');
 const { JobQueue } = require('./queue.js');
 const { TikTok } = require('./tiktok.js');
 const { TTS } = require('./tts.js');
@@ -12,13 +13,6 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
   '.glb': 'model/gltf-binary', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml',
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.otf': 'font/otf',
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.flac': 'audio/flac', '.opus': 'audio/ogg' };
-
-function deepMerge(a, b) {
-  if (Array.isArray(b) || typeof b !== 'object' || b === null) return b;
-  const out = Array.isArray(a) || typeof a !== 'object' || a === null ? {} : { ...a };
-  for (const [k, v] of Object.entries(b)) out[k] = (v && typeof v === 'object' && !Array.isArray(v)) ? deepMerge(out[k], v) : v;
-  return out;
-}
 
 module.exports = async function start(ctx) {
   const userData = app.getPath('userData');
@@ -29,23 +23,7 @@ module.exports = async function start(ctx) {
   // ---------------- cấu hình
   let saved = {};
   try { saved = JSON.parse(fs.readFileSync(cfgFile, 'utf8')); } catch { }
-  let cfg = deepMerge(DEFAULTS, saved);
-  cfg.fonts = [...DEFAULTS.fonts, ...(cfg.fonts || []).filter(f => !f.builtin)];
-  // mỗi mức đủ trường (bản mới thêm trường)
-  const tierBase = DEFAULTS.tiers[0];
-  cfg.tiers = (cfg.tiers || DEFAULTS.tiers).map(t => ({ ...tierBase, voiceFiles: [], ...t }));
-  // repo cập nhật đã đổi tên
-  if (!cfg.update.repo || /^pen-writer-updates$/i.test(cfg.update.repo)) cfg.update.repo = DEFAULTS.update.repo;
-  // v3 (bản 1.4.3): tên người xem mặc định mỗi người một dòng, căn giữa
-  if ((saved.configVersion || 1) < 3 && cfg.viewers) cfg.viewers.align = 'line';
-  // v4 (bản 1.5.0): avatar + khung hoa văn tăng dần theo mức (mức thấp -> cấp 1, cao dần tới cấp 7)
-  if ((saved.configVersion || 1) < 4) {
-    const order = cfg.tiers.slice().sort((a, b) => (a.min || 0) - (b.min || 0));
-    // khung avatar cấp 7 đã có vương miện -> khung tên đổi 'royal' thành 'frame' để không lặp
-    cfg.tiers.forEach(t => { if (t.ornament === 'royal') t.ornament = 'frame'; });
-    order.forEach((t, i) => { if (!saved.tiers || !(saved.tiers.find(x => x.id === t.id) || {}).avatarFrame) { t.avatarFrame = Math.min(7, i + 1); t.avatarCm = +(2.8 + Math.min(6, i) * 0.37).toFixed(1); } });
-  }
-  cfg.configVersion = DEFAULTS.configVersion;
+  let cfg = migrateConfig(DEFAULTS, saved);
   let saveT = null;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => fs.writeFile(cfgFile, JSON.stringify(cfg, null, 1), () => { }), 300); };
   const getCfg = () => cfg;

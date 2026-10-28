@@ -1,0 +1,15 @@
+/* Bảng điều khiển trên màn hình điện thoại */
+html, body { font-size: 15px; -webkit-text-size-adjust: 100%; }
+header { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+nav { padding: 0 6px; scrollbar-width: none; }
+nav::-webkit-scrollbar { display: none; }
+nav button { padding: 12px 11px; }
+main { padding: 10px; }
+.grid { grid-template-columns: 1fr; gap: 10px; }
+.card { padding: 12px; }
+.row { grid-template-columns: 1fr; gap: 4px; padding: 6px 0; }
+input, select, textarea, button { font-size: 16px !important; }
+input[type=range] { height: 28px; }
+.btns button, button.sm { min-height: 38px; }
+.mbox { width: 100vw; height: 100vh; border-radius: 0; }
+#toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
