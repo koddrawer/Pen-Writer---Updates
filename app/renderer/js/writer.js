@@ -1,7 +1,7 @@
 // Lập kế hoạch dòng chữ (tên + nội dung + hoa văn theo mức donate) và điều khiển ngòi bút: nhấc/hạ, di chuyển, viết, thay giấy.
 import { layoutText, textToStrokes, sanitize, hasRenderable, hatch, simplify, wrapText } from './text.js';
 import { buildOrnament, ornamentPad, avatarFrame, frameExtent } from './ornaments.js';
-import { avatarStrokes, silhouetteStrokes } from './avatar.js';
+import { avatarStrokes, silhouetteStrokes, avatarColor, scanLines } from './avatar.js';
 
 const LIFT = 0.008;
 
@@ -73,7 +73,7 @@ export class Writer {
       while (blockH + avOf(D) > limit - top0 && k++ < 6) { cap *= 0.9; measure(); }
       const room = limit - top0 - blockH - cap * 0.45;
       D = Math.max(0.008, Math.min(D, 2 * room * 0.98 / (2 * ext.r + ext.top)));
-      av = await this.avatarPlan(job, D, lvl); this.avSec = A.donorSec ?? 5;
+      av = await this.avatarPlan(job, D, lvl); this.avSec = A.donorSec ?? 5; this.avSketch = !av.img;
       avH = av.up + av.down + cap * 0.45;
     }
     // cao quá cả tờ giấy: thu nhỏ
@@ -92,7 +92,7 @@ export class Writer {
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
 
     const cx = W.align === 'left' ? side + pad.s * cap + L.width / 2 : W.align === 'right' ? P.W - side - pad.s * cap - L.width / 2 : P.W / 2;
-    if (av) this.queueAvatar(av, cx, top + av.up, A.color || W.inkColor || '#16121c', tier.ornColor || tier.color || W.inkColor || '#16121c', W.speed || 0.16);
+    if (av) this.queueAvatar(av, cx, top + av.up, A.color || W.inkColor || '#16121c', tier.ornColor || tier.color || W.inkColor || '#16121c', W.speed || 0.16, A.printSec ?? 0.5);
     const textTop = top + avH + pad.t * cap;
     const jit = W.jitter !== false ? (Math.random() - 0.5) * cap * 0.06 : 0;
     const base = textTop + asc + jit;
@@ -129,15 +129,30 @@ export class Writer {
     const A = this.cfg().avatars || {};
     let url = job.avatar || '';
     if (/^https?:/.test(url) && window.api) { try { url = await window.api.invoke('avatar:get', url) || ''; } catch { url = ''; } }
-    let art = null;
-    if (url) { try { art = await avatarStrokes(url, { cx: 0, cy: 0, D, detail: A.detail ?? 1.15 }); } catch (e) { console.warn('avatar lỗi', e); } }
-    if (!art || !art.strokes.length) art = silhouetteStrokes({ cx: 0, cy: 0, D });
+    let art = null, img = null;
+    if (url && (A.style || 'print') === 'print') {
+      try { img = await avatarColor(url, D * (this.sheet.ppm || 4200) * 1.5); } catch (e) { console.warn('avatar lỗi', e); }
+    }
+    if (url && !img) { try { art = await avatarStrokes(url, { cx: 0, cy: 0, D, detail: A.detail ?? 1.15 }); } catch (e) { console.warn('avatar lỗi', e); } }
+    if (!img && (!art || !art.strokes.length)) art = silhouetteStrokes({ cx: 0, cy: 0, D });
     const ext = frameExtent(level);
     const R = D / 2;
-    return { art, level, R, up: R * ext.r + R * ext.top, down: R * ext.r };
+    return { art, img, D, level, R, up: R * ext.r + R * ext.top, down: R * ext.r };
   }
-  queueAvatar(av, cx, cy, ink, frameInk, speed) {
-    this.queue(av.art.strokes.map(s => s.map(([u, v]) => [cx + u, cy + v])), av.art.nib, speed, ink);
+  queueAvatar(av, cx, cy, ink, frameInk, speed, sec = 0.5) {
+    if (av.img) {
+      // in màu: đầu bút quét nhanh từng hàng, thời gian cố định (không bị co giãn theo thời gian viết chữ)
+      const rows = Math.max(8, Math.min(24, Math.round(av.D * 500)));
+      const { lines, width } = scanLines(cx, cy, av.D, rows);
+      let pat = null; const sheetRef = () => this.sheet;
+      const style = () => { const sh = sheetRef(); if (!pat || pat.sh !== sh) pat = { sh, p: sh.makePattern(av.img, cx - av.R, cy - av.R, av.D) }; return pat.p; };
+      let L = 0, T = 0, prev = null;
+      for (const ln of lines) { L += Math.hypot(ln[1][0] - ln[0][0], ln[1][1] - ln[0][1]); if (prev) T += Math.hypot(ln[0][0] - prev[0], ln[0][1] - prev[1]); prev = ln[1]; }
+      const lift = 0.0015, zv = 1.5, n = lines.length;
+      const sp = Math.max(0.05, (L + T / 3) / Math.max(0.1, sec - n * 2 * lift / zv));
+      for (const ln of lines) this.steps.push({ k: 'stroke', pts: ln.map(p => [p[0], p[1]]), nib: width, speed: sp, travel: sp * 3, zv, mc: 0, color: style, alpha: 1, fixed: true, lift });
+      this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });   // ánh vàng chỉ áp cho khung + tên, ảnh giữ màu thật
+    } else this.queue(av.art.strokes.map(s => s.map(([u, v]) => [cx + u, cy + v])), av.art.nib, speed, ink);
     if (av.level > 0) {
       const o = avatarFrame(av.level, cx, cy, av.R); const fn = Math.max(0.0003, av.R * 0.03);
       for (const st of o.strokes) this.steps.push(this.mk(st.map(p => [p[0], p[1], p[2] ?? fn]), fn, speed * 1.3, frameInk));
@@ -188,7 +203,7 @@ export class Writer {
     // avatar người xem (kiểu mỗi người một dòng): vẽ phía trên tên
     const A = C.avatars || {};
     let av = null;
-    if (oneLine && A.enabled !== false && A.viewers !== false) { av = await this.avatarPlan(job, (A.viewerCm ?? 1.8) / 100, A.viewerFrame ?? 0); this.avSec = A.viewerSec ?? 3; }
+    if (oneLine && A.enabled !== false && A.viewers !== false) { av = await this.avatarPlan(job, (A.viewerCm ?? 1.8) / 100, A.viewerFrame ?? 0); this.avSec = A.viewerSec ?? 3; this.avSketch = !av.img; }
     const avH = av ? av.up + av.down + cap * 0.35 : 0;
     if (!spot) {
       const rowH = cap * (oneLine ? 1.75 : 2.1) + avH;
@@ -203,7 +218,7 @@ export class Writer {
     const nib = Math.max(0.0003, (W.nibMm ?? 0.85) / 1000 * cap * 100);
     const jit = W.jitter !== false ? (Math.random() - 0.5) * cap * 0.08 : 0;
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
-    if (this.pendingAv) { const p = this.pendingAv; this.pendingAv = null; this.queueAvatar(p.av, p.cx, p.cy, A.color || W.inkColor || '#16121c', ink, W.speed || 0.16); }
+    if (this.pendingAv) { const p = this.pendingAv; this.pendingAv = null; this.queueAvatar(p.av, p.cx, p.cy, A.color || W.inkColor || '#16121c', ink, W.speed || 0.16, A.printSec ?? 0.5); }
     const x = spot.x;
     // tên trước, dấu ngăn cách sau (nằm giữa tên mới và phần đã viết)
     const ox = x - L.bbox.x0;
@@ -291,12 +306,12 @@ export class Writer {
   async start(job) {
     this.job = job; this.busy = true; this.steps = []; this.planning = true;
     let ok = false;
-    this.tier = null; this.jobSec = 6; this.avSec = 0;
+    this.tier = null; this.jobSec = 6; this.avSec = 0; this.avSketch = false;
     try { ok = job.type === 'name' ? await this.planName(job) : job.type === 'quote' ? await this.planQuote(job) : await this.planDonor(job); }
     catch (e) { console.error('plan lỗi', e); }
     this.planning = false;
     if (!ok) { this.busy = false; this.job = null; return false; }
-    this.fitTime(job.type === 'donor' ? (this.tier?.sec ?? 6) + (this.avSec || 0) : this.jobSec + (this.avSec || 0));
+    this.fitTime(job.type === 'donor' ? (this.tier?.sec ?? 6) + (this.avSketch ? this.avSec || 0 : 0) : this.jobSec + (this.avSketch ? this.avSec || 0 : 0));
     this.steps.push({ k: 'done' });
     this.hooks.onJobStart && this.hooks.onJobStart(job, this.tier);
     return true;
@@ -314,7 +329,7 @@ export class Writer {
   }
   fitTime(sec) {
     const limit = Math.min(60, Math.max(1, +sec || 6));
-    const strokes = this.steps.filter(s => s.k === 'stroke'); if (!strokes.length) return;
+    const strokes = this.steps.filter(s => s.k === 'stroke' && !s.fixed); if (!strokes.length) return;
     const t = this.estimate(strokes);
     const k = t / (limit * 0.96);
     if (k > 1) for (const st of strokes) { st.speed *= k; st.travel *= k; st.zv *= k; st.mc /= k; }
@@ -344,7 +359,7 @@ export class Writer {
           const [tu, tv] = st.pts[0];
           if (!st.mv) { const d = Math.hypot(tu - this.pen.u, tv - this.pen.v); st.mv = { u0: this.pen.u, v0: this.pen.v, T: d / st.travel + st.mc, t: 0 }; }
           const mv = st.mv; const use = Math.min(budget, mv.T - mv.t); mv.t += use; budget -= use;
-          const q = mv.t / mv.T, e = q * q * (3 - 2 * q);
+          const q = mv.T > 1e-9 ? mv.t / mv.T : 1, e = q * q * (3 - 2 * q);
           this.pen.u = mv.u0 + (tu - mv.u0) * e; this.pen.v = mv.v0 + (tv - mv.v0) * e;
           if (mv.t >= mv.T - 1e-9) st.phase = 'lower';
           continue;
@@ -356,9 +371,9 @@ export class Writer {
           while (dist > 0 && st.i < st.pts.length) {
             const p = st.pts[st.i]; const prev = st.pts[st.i - 1];
             const dx = p[0] - this.pen.u, dy = p[1] - this.pen.v; const d = Math.hypot(dx, dy);
-            const w = ((p[2] ?? st.nib) + (prev[2] ?? st.nib)) / 2;
-            if (d <= dist) { sh.drawSeg(this.pen.u, this.pen.v, p[0], p[1], w, st.color, st.alpha); this.pen.u = p[0]; this.pen.v = p[1]; dist -= d; st.i++; }
-            else { const nu = this.pen.u + dx / d * dist, nv = this.pen.v + dy / d * dist; sh.drawSeg(this.pen.u, this.pen.v, nu, nv, w, st.color, st.alpha); this.pen.u = nu; this.pen.v = nv; dist = 0; }
+            const w = ((p[2] ?? st.nib) + (prev[2] ?? st.nib)) / 2; const col = typeof st.color === 'function' ? st.color() : st.color;
+            if (d <= dist) { sh.drawSeg(this.pen.u, this.pen.v, p[0], p[1], w, col, st.alpha); this.pen.u = p[0]; this.pen.v = p[1]; dist -= d; st.i++; }
+            else { const nu = this.pen.u + dx / d * dist, nv = this.pen.v + dy / d * dist; sh.drawSeg(this.pen.u, this.pen.v, nu, nv, w, col, st.alpha); this.pen.u = nu; this.pen.v = nv; dist = 0; }
           }
           budget = dist / st.speed;
           if (st.i >= st.pts.length) this.step = null; else budget = 0;
@@ -403,7 +418,7 @@ export class Writer {
   prep(st) {
     if (st.k !== 'stroke') return;
     const [u, v] = st.pts[0]; const d = Math.hypot(u - this.pen.u, v - this.pen.v);
-    st.lift = d < 0.01 ? 0.002 : d < 0.04 ? 0.004 : LIFT;
+    st.lift = st.fixed && st.lift ? st.lift : d < 0.01 ? 0.002 : d < 0.04 ? 0.004 : LIFT;
     const near = d < st.nib * 0.6 && this.pen.z < 0.0005;
     st.phase = near ? 'draw' : (this.pen.z < st.lift - 1e-7 ? 'lift' : 'move'); st.i = 1;
   }

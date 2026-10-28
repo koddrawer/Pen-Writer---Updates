@@ -77,6 +77,13 @@ export class Sheet {
       b.x0 = Math.min(b.x0, ax - r, bx - r); b.x1 = Math.max(b.x1, ax + r, bx + r); b.y0 = Math.min(b.y0, ay - r, by - r); b.y1 = Math.max(b.y1, ay + r, by + r); }
     this.dirty = true;
   }
+  // mực ảnh màu: nét bút vẽ bằng pattern ảnh (chỉ lộ ảnh nơi ngòi quét qua). img: canvas đã cắt tròn, đặt tại (u0, v0) cỡ D mét
+  makePattern(img, u0, v0, D) {
+    const pat = this.ctx.createPattern(img, 'no-repeat');
+    const k = D * this.ppm / img.width;
+    pat.setTransform(new DOMMatrix().translate(u0 * this.ppm, v0 * this.ppm).scale(k, k));
+    return pat;
+  }
   clear() { this.ctx.clearRect(0, 0, this.W, this.H); this.dirty = true; this.used = 0; this.glowBox = null; this.lastBox = null; this.uniforms.glowT.value = -1; this.tex.needsUpdate = true; }
 
   // ghi lại vùng mực của một lượt viết (để làm ánh vàng)

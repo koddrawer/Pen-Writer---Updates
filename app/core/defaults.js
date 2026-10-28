@@ -58,7 +58,7 @@ module.exports = {
     swapSec: 2.2, tint: '#f4ede0', grain: 1, pxPerM: 4200,
   },
   // ảnh đại diện: bút vẽ lại avatar TikTok kiểu ký hoạ đan nét, tên viết ngay bên dưới
-  avatars: { enabled: true, donors: true, viewers: true, viewerCm: 2.3, viewerFrame: 0, detail: 1.15, color: '', donorSec: 5, viewerSec: 3 },
+  avatars: { enabled: true, style: 'print', printSec: 0.5, donors: true, viewers: true, viewerCm: 2.3, viewerFrame: 0, detail: 1.15, color: '', donorSec: 5, viewerSec: 3 },
   glow: { enabled: true, sec: 2.4, color: '#ffc94a', strength: 1.2, types: { donor: true, name: false, quote: false } },
   // tên người xem: viết nối tiếp trên cùng một dòng, hết dòng thì xuống dòng
   viewers: {

@@ -126,3 +126,45 @@ export function silhouetteStrokes({ cx, cy, D }) {
   out.push(circ(cx, cy + r * 0.75, r * 0.62, Math.PI * 1.08, Math.PI * 1.92));
   return { strokes: out, nib: Math.max(0.0004, D * 0.012) };
 }
+
+// ---- IN MÀU: ảnh gốc cắt tròn, sắc nét, đầu bút quét từng hàng để lộ ảnh
+const colorCache = new Map();
+export async function avatarColor(url, px) {
+  const key = url + '|' + px;
+  if (!colorCache.has(key)) colorCache.set(key, (async () => {
+    const im = await loadImage(url);
+    const N = Math.max(48, Math.min(1024, Math.round(px)));
+    const cv = document.createElement('canvas'); cv.width = cv.height = N;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    c.save(); c.beginPath(); c.arc(N / 2, N / 2, N / 2, 0, Math.PI * 2); c.clip();
+    const s = Math.min(im.naturalWidth, im.naturalHeight);
+    c.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, N, N);
+    c.restore();
+    // làm nét nhẹ (unsharp mask 3x3) cho ảnh rõ khi in nhỏ
+    try {
+      const d = c.getImageData(0, 0, N, N); const a = d.data; const o = new Uint8ClampedArray(a);
+      const amt = 0.45;
+      for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
+        const i = (y * N + x) * 4;
+        for (let ch = 0; ch < 3; ch++) {
+          const bl = (o[i - 4 + ch] + o[i + 4 + ch] + o[i - N * 4 + ch] + o[i + N * 4 + ch]) / 4;
+          a[i + ch] = o[i + ch] + (o[i + ch] - bl) * amt;
+        }
+      }
+      c.putImageData(d, 0, 0);
+    } catch { }
+    return cv;
+  })().catch(e => { colorCache.delete(key); throw e; }));
+  return colorCache.get(key);
+}
+// đường quét: các hàng ngang cắt theo hình tròn, chạy zigzag
+export function scanLines(cx, cy, D, rows) {
+  const R = D / 2, h = D / rows, out = [];
+  for (let i = 0; i < rows; i++) {
+    const y = -R + h * (i + 0.5); const half = Math.sqrt(Math.max(0, R * R - y * y)) + h * 0.5;
+    const a = [cx - half, cy + y], b = [cx + half, cy + y];
+    out.push(i % 2 ? [b, a] : [a, b]);
+  }
+  return { lines: out, width: h * 1.25 };
+}
