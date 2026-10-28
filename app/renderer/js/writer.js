@@ -131,27 +131,42 @@ export class Writer {
     let L = layoutText(chain, name, cap / capR);
     if (L.width > full) { L = layoutText(chain, name, cap / capR * full / L.width); }
     const gap = Math.max(cap * 0.5, (c.gapCm ?? 0.7) / 100);
-    const r = this.row;
-    if (!r || Math.abs(r.cap - cap) > 1e-6 || r.font !== (c.fontId || W.fontId) || r.x + gap + L.width > P.W - side) {
+    const center = (c.align || 'center') === 'center';
+    const lo = side, hi = P.W - side, font = c.fontId || W.fontId;
+    // chọn chỗ đặt: căn giữa -> tên đầu ở chính giữa, tên sau thêm luân phiên phải/trái để dòng luôn cân giữa tờ
+    const tryPlace = (r) => {
+      if (!r || Math.abs(r.cap - cap) > 1e-6 || r.font !== font) return null;
+      const right = { side: 'R', x: r.x1 + gap, sep: r.x1 + gap / 2 };
+      const left = { side: 'L', x: r.x0 - gap - L.width, sep: r.x0 - gap / 2 };
+      const opts = !center ? [right] : (r.nR <= r.nL ? [right, left] : [left, right]);
+      return opts.find(o => o.x >= lo - 1e-6 && o.x + L.width <= hi + 1e-6) || null;
+    };
+    let spot = tryPlace(this.row);
+    if (!spot) {
       const rowH = cap * 2.1;
       const top = this.placeBlock(rowH);
-      this.row = { top, base: top + cap * 1.4, x: side, n: 0, cap, font: c.fontId || W.fontId };
+      const x0 = center ? P.W / 2 - L.width / 2 : side;
+      this.row = { top, base: top + cap * 1.4, x0, x1: x0, nL: 0, nR: 0, n: 0, cap, font };
+      spot = { side: 'first', x: x0 };
     }
     const row = this.row;
     const ink = c.color || W.inkColor || '#16121c';
     const nib = Math.max(0.0003, (W.nibMm ?? 0.85) / 1000 * cap * 100);
     const jit = W.jitter !== false ? (Math.random() - 0.5) * cap * 0.08 : 0;
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
-    let x = row.x;
-    if (row.n > 0) {
-      const mx = row.x + gap / 2, my = row.base - cap * 0.35;
-      if (c.separator === 'dot') { const rr = Math.max(nib * 0.8, cap * 0.07); const d = []; for (let i = 0; i <= 10; i++) { const a = i / 10 * Math.PI * 2; d.push([mx + Math.cos(a) * rr * 0.5, my + Math.sin(a) * rr * 0.5]); } this.queue([d], rr, W.speed || 0.16, ink); }
-      else if (c.separator === 'dash') this.queue([[[mx - gap * 0.18, my], [mx + gap * 0.18, my]]], nib, W.speed || 0.16, ink);
-      x += gap;
-    }
+    const x = spot.x;
+    // tên trước, dấu ngăn cách sau (nằm giữa tên mới và phần đã viết)
     const ox = x - L.bbox.x0;
     this.queue(textToStrokes(L, { nib, fill: W.fill || 'hatch', place: ([px, py]) => [ox + px, row.base + jit - py] }), nib, W.speed || 0.16, ink);
-    row.x = x + L.width; row.n++;
+    if (spot.side !== 'first') {
+      const mx = spot.sep, my = row.base - cap * 0.35;
+      if (c.separator === 'dot') { const rr = Math.max(nib * 0.8, cap * 0.07); const d = []; for (let i = 0; i <= 10; i++) { const a = i / 10 * Math.PI * 2; d.push([mx + Math.cos(a) * rr * 0.5, my + Math.sin(a) * rr * 0.5]); } this.queue([d], rr, W.speed || 0.16, ink); }
+      else if (c.separator === 'dash') this.queue([[[mx - gap * 0.18, my], [mx + gap * 0.18, my]]], nib, W.speed || 0.16, ink);
+    }
+    if (spot.side === 'L') { row.x0 = x; row.nL++; }
+    else if (spot.side === 'R') { row.x1 = x + L.width; row.nR++; }
+    else { row.x0 = x; row.x1 = x + L.width; }
+    row.n++;
     this.jobSec = c.sec ?? 3;
     return true;
   }

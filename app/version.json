@@ -1,6 +1,6 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "minShell": "1.0.0",
-  "notes": "Sửa lỗi tặng hoa hồng (và mọi quà) không được viết tên: đọc tên quà/số xu theo định dạng mới của TikTok, combo tự chốt sau 3 giây; sửa đọc bình luận và số người xem",
+  "notes": "Tên người xem căn chính giữa: tên đầu dòng ở giữa, tên sau thêm luân phiên phải/trái để dòng luôn cân giữa (chọn lại kiểu cũ trong tab Người xem & Quote)",
   "date": "2026-10-28"
 }

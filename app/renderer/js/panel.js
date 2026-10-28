@@ -236,6 +236,7 @@ function renderViewers() {
       field('viewers.fontId', 'Font chữ', 'select', { options: () => fontOptions(true) }),
       field('viewers.color', 'Màu chữ', 'color', { clearable: true, def: cfg.writer.inkColor }),
       field('viewers.gapCm', 'Khoảng cách giữa 2 tên', 'range', { min: 0.2, max: 3, step: 0.05, unit: ' cm' }),
+      field('viewers.align', 'Căn dòng', 'select', { options: [['center', 'Chính giữa (tên mới thêm luân phiên phải/trái)'], ['left', 'Từ trái sang phải']] }),
       field('viewers.separator', 'Dấu ngăn cách', 'select', { options: [['dot', 'Chấm ·'], ['dash', 'Gạch –'], ['none', 'Không có']] }),
       field('viewers.display', 'Viết theo', 'select', { options: [['nickname', 'Tên hiển thị (nickname)'], ['uniqueId', 'ID (@username)']] }),
       field('viewers.maxChars', 'Tối đa ký tự', 'number', { min: 3, max: 40 }),
