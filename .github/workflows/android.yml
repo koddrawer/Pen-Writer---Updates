@@ -54,8 +54,9 @@ jobs:
           set -o pipefail
           ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee ../../build.log
           mkdir -p ../../out
-          cp app/build/outputs/apk/release/*.apk ../../out/PenWriter.apk
-          cp ../../out/PenWriter.apk "../../out/PenWriter-${{ steps.v.outputs.name }}.apk"
+          ls app/build/outputs/apk/release/
+          cp app/build/outputs/apk/release/*arm64-v8a*.apk ../../out/PenWriter.apk
+          cp app/build/outputs/apk/release/*armeabi-v7a*.apk ../../out/PenWriter-armv7.apk
           ls -la ../../out
       - uses: actions/upload-artifact@v4
         with:
@@ -68,11 +69,12 @@ jobs:
           name: Pen Writer Android ${{ steps.v.outputs.name }}
           make_latest: true
           body: |
+            PenWriter.apk: hầu hết điện thoại (chip 64-bit). PenWriter-armv7.apk: máy đời cũ 32-bit.
             APK Pen Writer cho Android (bản cài ${{ steps.v.outputs.name }}, kèm giao diện v${{ steps.v.outputs.app }}).
             Giao diện và lõi tự cập nhật từ repo này, chỉ cần cài APK mới khi có bản cài mới.
           files: |
             out/PenWriter.apk
-            out/PenWriter-${{ steps.v.outputs.name }}.apk
+            out/PenWriter-armv7.apk
       - name: Lưu nhật ký lỗi (công khai để đọc khi build hỏng)
         if: failure()
         uses: softprops/action-gh-release@v2
