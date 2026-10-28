@@ -3,6 +3,7 @@ const builtinFont = (id, name, fam, w, subs = ['latin', 'latin-ext', 'vietnamese
   id, name, builtin: true, files: subs.map(s => `${fam}-${s}-${w}-normal.woff`),
 });
 const NO_VN = ['latin', 'latin-ext'];
+const oneFile = (id, name, file) => ({ id, name, builtin: true, files: [file] });
 
 // Mức donate: mỗi mức một cỡ chữ + hoa văn riêng (mức thấp nhất không có hoa văn)
 const tier = (id, name, min, sizeCm, ornament, sec, extra = {}) => ({
@@ -27,6 +28,11 @@ module.exports = {
     builtinFont('rye', 'Rye (miền Tây cổ)', 'rye', 400, NO_VN),
     builtinFont('abril', 'Abril Fatface (tiêu đề)', 'abril-fatface', 400, NO_VN),
     builtinFont('cinzel', 'Cinzel Decorative (khắc)', 'cinzel-decorative', 700, NO_VN),
+    oneFile('ma-shan-zheng', 'Ma Shan Zheng (thư pháp Trung)', 'ma-shan-zheng-cjk.woff'),
+    oneFile('yuji-syuku', 'Yuji Syuku (bút lông Nhật)', 'yuji-syuku-cjk.woff'),
+    oneFile('nanum-brush', 'Nanum Brush Script (bút lông Hàn)', 'nanum-brush-script-ko.woff'),
+    oneFile('marhey', 'Marhey (viết tay Ả Rập)', 'marhey-arabic.woff'),
+    oneFile('marck-script', 'Marck Script (viết tay Nga)', 'marck-script-cyrillic.woff'),
   ],
   writer: {
     fontId: 'great-vibes', inkColor: '#16121c', display: 'nickname', maxChars: 24,
@@ -59,8 +65,12 @@ module.exports = {
   },
   // câu quote khi rảnh (không ai tặng quà / vào phòng)
   quotes: {
-    enabled: true, afterSec: 20, afterJobSec: 6, gapSec: 15, random: true, language: 'both',
-    fontId: 'dancing', sizeCm: 1.1, authorSizePct: 60, color: '', widthPct: 74, divider: true, sec: 12,
+    enabled: true, afterSec: 20, afterJobSec: 6, gapSec: 15, random: true,
+    // ngôn ngữ được viết (xen kẽ, không lặp lại ngôn ngữ vừa viết)
+    langs: { vi: true, en: true, zh: true, ja: true, ko: true, ar: true, ru: true },
+    langFonts: { zh: 'ma-shan-zheng', ja: 'yuji-syuku', ko: 'nanum-brush', ar: 'marhey', ru: 'marck-script' },
+    showMeaning: true, meaningSizePct: 62,    // viết nghĩa tiếng Việt bên dưới câu tiếng nước ngoài
+    fontId: 'dancing', sizeCm: 1.1, authorSizePct: 60, color: '', widthPct: 66, divider: true, sec: 12,
     list: [
       'Có công mài sắt, có ngày nên kim — Tục ngữ',
       'Đi một ngày đàng, học một sàng khôn — Tục ngữ',
@@ -91,6 +101,59 @@ module.exports = {
       'Every cloud has a silver lining — Proverb',
       'Be the reason someone smiles today',
       'Thank you for stopping by. Have a wonderful day!',
+    ],
+    // mỗi dòng: câu gốc || nghĩa tiếng Việt — nguồn
+    listZh: [
+      '千里之行，始于足下 || Hành trình ngàn dặm bắt đầu từ một bước chân — Lão Tử',
+      '有志者事竟成 || Có chí thì nên — Tục ngữ Trung Hoa',
+      '滴水穿石 || Nước chảy đá mòn — Thành ngữ Trung Hoa',
+      '饮水思源 || Uống nước nhớ nguồn — Thành ngữ Trung Hoa',
+      '三人行，必有我师 || Ba người cùng đi, ắt có người là thầy ta — Khổng Tử',
+      '己所不欲，勿施于人 || Điều mình không muốn, chớ làm cho người khác — Khổng Tử',
+      '学而不思则罔，思而不学则殆 || Học mà không nghĩ thì mờ mịt, nghĩ mà không học thì nguy — Khổng Tử',
+      '一寸光阴一寸金 || Một tấc thời gian là một tấc vàng — Tục ngữ Trung Hoa',
+      '失败是成功之母 || Thất bại là mẹ thành công — Tục ngữ Trung Hoa',
+      '知足常乐 || Biết đủ thì luôn vui — Thành ngữ Trung Hoa',
+      '海内存知己，天涯若比邻 || Bốn biển có tri kỷ, chân trời cũng như láng giềng — Vương Bột',
+    ],
+    listJa: [
+      '七転び八起き || Ngã bảy lần, đứng dậy tám lần — Tục ngữ Nhật Bản',
+      '継続は力なり || Kiên trì chính là sức mạnh — Tục ngữ Nhật Bản',
+      '一期一会 || Mỗi cuộc gặp gỡ chỉ có một lần trong đời — Thành ngữ Nhật Bản',
+      '石の上にも三年 || Ngồi trên đá ba năm đá cũng ấm, kiên nhẫn ắt thành — Tục ngữ Nhật Bản',
+      '塵も積もれば山となる || Bụi tích lại cũng thành núi — Tục ngữ Nhật Bản',
+      '笑う門には福来る || Nhà có tiếng cười, phúc tự tìm đến — Tục ngữ Nhật Bản',
+      '雨降って地固まる || Sau cơn mưa, đất càng thêm vững — Tục ngữ Nhật Bản',
+      '急がば回れ || Muốn nhanh thì hãy đi đường vòng, chậm mà chắc — Tục ngữ Nhật Bản',
+      '猿も木から落ちる || Khỉ cũng có lúc ngã từ trên cây — Tục ngữ Nhật Bản',
+    ],
+    listKo: [
+      '시작이 반이다 || Bắt đầu là đã xong một nửa — Tục ngữ Hàn Quốc',
+      '천 리 길도 한 걸음부터 || Đường ngàn dặm cũng bắt đầu từ một bước chân — Tục ngữ Hàn Quốc',
+      '티끌 모아 태산 || Gom từng hạt bụi thành núi Thái Sơn — Tục ngữ Hàn Quốc',
+      '가는 말이 고와야 오는 말이 곱다 || Lời nói đi có đẹp thì lời nói lại mới hay — Tục ngữ Hàn Quốc',
+      '백지장도 맞들면 낫다 || Tờ giấy mỏng cũng nên cùng nhau nâng, đồng lòng thì dễ — Tục ngữ Hàn Quốc',
+      '고생 끝에 낙이 온다 || Hết khổ rồi sẽ đến lúc sướng — Tục ngữ Hàn Quốc',
+      '웃으면 복이 와요 || Cười lên thì phúc sẽ đến — Tục ngữ Hàn Quốc',
+      '낮말은 새가 듣고 밤말은 쥐가 듣는다 || Lời ngày chim nghe, lời đêm chuột nghe – tai vách mạch rừng — Tục ngữ Hàn Quốc',
+    ],
+    listAr: [
+      'الصبر مفتاح الفرج || Kiên nhẫn là chìa khóa của niềm vui — Tục ngữ Ả Rập',
+      'من جد وجد || Ai nỗ lực thì sẽ đạt được — Tục ngữ Ả Rập',
+      'العلم نور || Tri thức là ánh sáng — Tục ngữ Ả Rập',
+      'الصديق وقت الضيق || Bạn thật là người ở bên lúc khó khăn — Tục ngữ Ả Rập',
+      'خير الكلام ما قل ودل || Lời hay nhất là lời ngắn gọn mà đủ ý — Tục ngữ Ả Rập',
+      'في التأني السلامة وفي العجلة الندامة || Thong thả thì an toàn, vội vàng thì hối hận — Tục ngữ Ả Rập',
+    ],
+    listRu: [
+      'Тише едешь, дальше будешь || Đi chậm thì đi được xa — Tục ngữ Nga',
+      'Без труда не выловишь и рыбку из пруда || Không chịu khó thì chẳng bắt nổi con cá dưới ao — Tục ngữ Nga',
+      'Не имей сто рублей, а имей сто друзей || Đừng có trăm rúp, hãy có trăm người bạn — Tục ngữ Nga',
+      'Терпение и труд всё перетрут || Kiên nhẫn và chăm chỉ thì việc gì cũng xong — Tục ngữ Nga',
+      'Век живи, век учись || Sống đến đâu học đến đó — Tục ngữ Nga',
+      'Друг познаётся в беде || Hoạn nạn mới biết bạn hiền — Tục ngữ Nga',
+      'Утро вечера мудренее || Buổi sáng sáng suốt hơn buổi tối, để mai tính — Tục ngữ Nga',
+      'Делу время, потехе час || Làm việc cho ra việc, chơi có giờ có giấc — Tục ngữ Nga',
     ],
   },
   voice: {

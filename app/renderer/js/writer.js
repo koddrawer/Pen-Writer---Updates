@@ -159,18 +159,31 @@ export class Writer {
   // câu quote khi rảnh: khối chữ căn giữa nhiều dòng, tên tác giả bên dưới
   async planQuote(job) {
     const C = this.cfg(); const q = C.quotes || {}; const W = C.writer; const S = C.sheet; const P = this.d.P;
-    const chain = await this.fonts.chain(q.fontId || W.fontId);
+    const fid = (q.langFonts || {})[job.lang] || q.fontId || W.fontId;
+    const chain = await this.fonts.chain(fid);
+    const vchain = await this.fonts.chain(q.fontId || W.fontId);                 // chữ Việt cho nghĩa + tác giả
     const text = sanitize(chain, job.text, 300); if (!text) return false;
-    const author = job.author ? sanitize(chain, job.author, 60) : '';
-    const capR = layoutText(chain, 'H', 1).capHeight || 0.7;
+    const meaning = q.showMeaning !== false && job.meaning ? sanitize(vchain, job.meaning, 300) : '';
+    const author = job.author ? sanitize(vchain, job.author, 60) : '';
+    const capR = layoutText(vchain, 'H', 1).capHeight || 0.7;
     const top0 = (S.marginTopCm ?? 2.4) / 100, limit = P.H - (S.marginBottomCm ?? 2.2) / 100;
     const maxW = (P.W - 2 * (S.marginSideCm ?? 1.5) / 100) * Math.min(1, (q.widthPct || 86) / 100);
-    let cap = (q.sizeCm || 1.3) / 100, lines, H, acap;
-    for (let k = 0; k < 14; k++) {
-      acap = cap * (q.authorSizePct || 60) / 100;
-      lines = wrapText(chain, text, cap / capR, maxW);
-      H = lines.length * cap * 1.9 + (author ? acap * 2.3 : 0) + (q.divider !== false ? cap * 1.1 : 0) + cap * 0.4;
-      if (H <= (limit - top0) * 0.6 && lines.every(l => layoutText(chain, l, cap / capR).width <= maxW)) break;
+    // chữ Hán/Nhật/Hàn/Ả Rập không có chữ hoa: lấy cỡ theo chiều cao chữ thực
+    const foreign = ['zh', 'ja', 'ko', 'ar'].includes(job.lang);
+    const emOf = (cap) => foreign ? cap / 0.82 : cap / capR;
+    let cap = (q.sizeCm || 1.1) / 100 * (foreign ? 1.15 : 1), lines, mlines, H, acap, mcap;
+    const fits = (ls, ch, em) => ls.every(l => layoutText(ch, l, em).width <= maxW);
+    for (let k = 0; k < 16; k++) {
+      acap = cap * (q.authorSizePct || 60) / 100; mcap = cap * (q.meaningSizePct || 55) / 100 * (foreign ? 0.87 : 1);
+      lines = wrapText(chain, text, emOf(cap), maxW);
+      // chữ Hán/Nhật: nếu phải xuống dòng thì ưu tiên ngắt ngay sau dấu câu (，、。) cho cân đối
+      if (lines.length > 1 && /[，、。,]/.test(text)) {
+        const parts = text.split(/(?<=[，、。,])/).map(x => x.trim()).filter(Boolean);
+        if (parts.length > 1 && fits(parts, chain, emOf(cap))) lines = parts;
+      }
+      mlines = meaning ? wrapText(vchain, meaning, mcap / capR, maxW) : [];
+      H = cap * 1.4 + (lines.length - 1) * cap * 1.9 + cap * 0.35 + (mlines.length ? mcap * 1.55 + (mlines.length - 1) * mcap * 1.95 : 0) + (author ? acap * 2.35 : 0) + (q.divider !== false ? cap * 0.9 : 0) + cap * 0.3;
+      if (H <= (limit - top0) * 0.62 && fits(lines, chain, emOf(cap)) && fits(mlines, vchain, mcap / capR)) break;
       cap *= 0.9;
     }
     this.row = null;
@@ -180,27 +193,33 @@ export class Writer {
     const cx = P.W / 2; const sp = W.speed || 0.16;
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
     let y = top + cap * 1.4, right = cx;
-    for (const ln of lines) {
-      const L = layoutText(chain, ln, cap / capR); const ox = cx - (L.bbox.x0 + L.bbox.x1) / 2; const base = y;
+    const put = (ch, str, em, base, n) => {
+      const L = layoutText(ch, str, em); const ox = cx - (L.bbox.x0 + L.bbox.x1) / 2;
       right = Math.max(right, ox + L.bbox.x1);
-      this.queue(textToStrokes(L, { nib, fill: W.fill || 'hatch', place: ([px, py]) => [ox + px, base - py] }), nib, sp, ink);
-      y += cap * 1.9;
+      this.queue(textToStrokes(L, { nib: n, fill: W.fill || 'hatch', place: ([px, py]) => [ox + px, base - py] }), n, sp, ink);
+    };
+    let last = y, lastDesc = cap * 0.35;
+    for (const ln of lines) { put(chain, ln, emOf(cap), y, nib); last = y; y += cap * 1.9; }
+    if (mlines.length) {
+      let my = last + lastDesc + mcap * 1.55;
+      for (const ln of mlines) { put(vchain, ln, mcap / capR, my, nib * 0.75); last = my; my += mcap * 1.95; }
+      lastDesc = mcap * 0.35;
     }
     if (author) {
-      const La = layoutText(chain, '— ' + author, acap / capR); const ab = y - cap * 0.6 + acap * 0.9; const ox = right - La.bbox.x1;
+      const La = layoutText(vchain, '— ' + author, acap / capR); const ab = last + lastDesc + acap * 2.0; const ox = cx - (La.bbox.x0 + La.bbox.x1) / 2;
       const anib = nib * 0.8;
       this.queue(textToStrokes(La, { nib: anib, fill: W.fill || 'hatch', place: ([px, py]) => [ox + px, ab - py] }), anib, sp, ink);
-      y = ab + acap * 1.2;
+      last = ab; lastDesc = acap * 0.35;
     }
+    y = last + lastDesc + cap * 0.3;
     if (q.divider !== false) {
       const dy = y + cap * 0.1, w = Math.min(maxW * 0.3, cap * 4), dn = nib * 0.7, r = cap * 0.14;
       const dia = [[cx - r, dy], [cx, dy - r * 1.2], [cx + r, dy], [cx, dy + r * 1.2], [cx - r, dy]];
       this.queue([[[cx - w, dy], [cx - r * 1.8, dy]], dia, [[cx + r * 1.8, dy], [cx + w, dy]]], dn, sp, ink);
     }
-    this.jobSec = q.sec ?? 12;
+    this.jobSec = (q.sec ?? 12) * (meaning ? 1.4 : 1);
     return true;
   }
-
   mk(pts, nib, speed, color) { return { k: 'stroke', pts: pts.map(p => [Math.min(this.d.P.W, Math.max(0, p[0])), Math.min(this.d.P.H, Math.max(0, p[1])), p[2]]), nib, speed, travel: speed * 2.4, zv: 0.12, mc: 0.03, color }; }
   queue(strokes, nib, speed, color) { for (const s of strokes) if (s.length > 1) this.steps.push(this.mk(s, nib, speed, color)); }
 

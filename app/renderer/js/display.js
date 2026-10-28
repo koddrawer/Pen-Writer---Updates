@@ -120,7 +120,9 @@ window.addEventListener('resize', resize);
 applyDisplayCfg();
 
 // ---------- font
-const FALLBACK = ['playfair-display-vietnamese-700-normal.woff', 'dancing-script-vietnamese-700-normal.woff', 'playfair-display-latin-ext-700-normal.woff', 'playfair-display-latin-700-normal.woff'].map(f => '../assets/fonts/' + f);
+// dự phòng: Latin/Việt, rồi tới Nga, Ả Rập, Hàn, Hán, Nhật (tên người xem nước ngoài cũng viết được)
+const FALLBACK = ['playfair-display-vietnamese-700-normal.woff', 'dancing-script-vietnamese-700-normal.woff', 'playfair-display-latin-ext-700-normal.woff', 'playfair-display-latin-700-normal.woff',
+  'marck-script-cyrillic.woff', 'marhey-arabic.woff', 'nanum-brush-script-ko.woff', 'ma-shan-zheng-cjk.woff', 'yuji-syuku-cjk.woff'].map(f => '../assets/fonts/' + f);
 const fonts = {
   cache: new Map(),
   urlsFor(id) {

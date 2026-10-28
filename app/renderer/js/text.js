@@ -71,7 +71,13 @@ function flattenCommands(cmds, tol) {
  * Dàn chữ: trả về danh sách glyph {contours:[[[x,y]...]...], x0, x1} đơn vị mét, trục y hướng LÊN, gốc = baseline trái.
  * em = cỡ em (mét).
  */
+const RTL_RE = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+export const isRTL = (t) => RTL_RE.test(t || '');
+// chữ không dùng dấu cách giữa các từ (Hán, Kana, Hangul có cách nhưng ngắt theo âm tiết vẫn được)
+const CJK_RE = /[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF\u3000-\u303F]/;
+
 export function layoutText(chain, text, em, letterSpacing = 0) {
+  if (isRTL(text)) return layoutRTL(chain, text, em);
   const glyphs = []; let x = 0; let prev = null; let prevFont = null;
   const tol = Math.max(em * 0.012, 0.0004);
   for (const ch of text) {
@@ -89,6 +95,31 @@ export function layoutText(chain, text, em, letterSpacing = 0) {
   const f0 = chain[0];
   const capRatio = f0 && f0.tables.os2 && f0.tables.os2.sCapHeight ? f0.tables.os2.sCapHeight / f0.unitsPerEm : 0.7;
   return { glyphs, width: x, em, capHeight: capRatio * em, bbox: bboxOf(glyphs.flatMap(g => g.contours)) };
+}
+
+// Ả Rập / Do Thái: nối nét theo ngữ cảnh (đầu/giữa/cuối từ) và đặt chữ từ PHẢI sang TRÁI.
+// Thứ tự glyph giữ theo thứ tự đọc -> ngòi bút viết từ phải sang trái như người viết thật.
+function layoutRTL(chain, text, em) {
+  const tol = Math.max(em * 0.012, 0.0004);
+  const f = chain.find(ft => [...text].some(ch => ch.trim() && RTL_RE.test(ch) && ft.charToGlyph(ch).index > 0)) || chain[0];
+  if (!f) return { glyphs: [], width: 0, em, capHeight: 0.7 * em, bbox: bboxOf([]) };
+  const scale = em / f.unitsPerEm;
+  // opentype.js trả glyph đã nối nét theo thứ tự HIỂN THỊ (trái -> phải)
+  let gl = [];
+  try { gl = f.stringToGlyphs(text); } catch { gl = [...text].map(ch => f.charToGlyph(ch)).reverse(); }
+  let x = 0; const glyphs = [];
+  for (const g of gl) {
+    const adv = (g.advanceWidth || 0) * scale;
+    if (g && g.index > 0) {
+      const contours = flattenCommands(g.getPath(x, 0, em).commands, tol).map(c => c.map(([px, py]) => [px, -py]));
+      if (contours.length) glyphs.push({ contours, x0: x, x1: x + adv, ch: '' });
+    }
+    x += adv;
+  }
+  const total = x;
+  glyphs.reverse();          // ngòi bút viết từ phải sang trái
+  const capRatio = f.tables.os2 && f.tables.os2.sCapHeight ? f.tables.os2.sCapHeight / f.unitsPerEm : 0.7;
+  return { glyphs, width: total, em, capHeight: capRatio * em, bbox: bboxOf(glyphs.flatMap(g => g.contours)), rtl: true };
 }
 
 export function bboxOf(contours) {
@@ -194,16 +225,41 @@ export function sortLTR(strokes) {
   return strokes.map(startLeft).sort((a, b) => minX(a) - minX(b));
 }
 
-// Ngắt dòng theo bề rộng tối đa (mét) – trả về mảng dòng
+// Ngắt dòng theo bề rộng tối đa (mét) – trả về mảng dòng. Chữ Hán/Kana ngắt được giữa 2 chữ bất kỳ.
 export function wrapText(chain, text, em, maxW) {
-  const words = text.split(/\s+/).filter(Boolean); const lines = []; let cur = '';
-  const w = (t) => layoutText(chain, t, em).width;
-  for (const wd of words) {
-    const t = cur ? cur + ' ' + wd : wd;
-    if (!cur || w(t) <= maxW) cur = t;
-    else { lines.push(cur); cur = wd; }
+  const toks = [];   // { t: chữ, sp: có dấu cách phía trước }
+  let sp = false;
+  for (const w of text.split(/(\s+)/)) {
+    if (!w) continue;
+    if (/^\s+$/.test(w)) { sp = true; continue; }
+    if (CJK_RE.test(w)) {
+      // tách từng chữ, dấu câu dính vào chữ đứng trước
+      let first = true;
+      for (const ch of w) {
+        if (!first && /[，。、！？；：）」』》〉…,.!?;:)]/.test(ch) && toks.length) { toks[toks.length - 1].t += ch; continue; }
+        toks.push({ t: ch, sp: first ? sp : false }); first = false;
+      }
+    } else toks.push({ t: w, sp });
+    sp = false;
   }
-  if (cur) lines.push(cur);
+  const w = (t) => layoutText(chain, t, em).width;
+  const greedy = (lim) => {
+    const lines = []; let cur = '';
+    for (const k of toks) {
+      const t = cur ? cur + (k.sp ? ' ' : '') + k.t : k.t;
+      if (!cur || w(t) <= lim) cur = t;
+      else { lines.push(cur); cur = k.t; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  };
+  let lines = greedy(maxW);
+  // cân đối: giữ nguyên số dòng nhưng thu hẹp bề rộng tối đa -> các dòng dài gần bằng nhau, không mồ côi chữ cuối
+  if (lines.length > 1) {
+    let lo = maxW * 0.35, hi = maxW;
+    for (let i = 0; i < 12; i++) { const mid = (lo + hi) / 2; if (greedy(mid).length > lines.length) lo = mid; else hi = mid; }
+    lines = greedy(hi);
+  }
   return lines;
 }
 

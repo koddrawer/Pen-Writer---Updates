@@ -67,23 +67,27 @@ class JobQueue {
       if (now - this.lastJobEnd < (q.afterJobSec ?? 6) * 1000) return null;
       if (now - this.lastQuoteEnd < (q.gapSec ?? 15) * 1000) return null;
     }
-    const lang = q.language || 'both';
-    const list = [...(lang !== 'en' ? (q.list || []).map(x => [x, 'vi']) : []), ...(lang !== 'vi' ? (q.listEn || []).map(x => [x, 'en']) : [])]
-      .map(([x, l]) => [String(x).trim(), l]).filter(([x]) => x);
-    if (!list.length) return null;
+    // ngôn ngữ đang bật (tương thích cấu hình cũ: language = vi | en | both)
+    const KEYS = { vi: 'list', en: 'listEn', zh: 'listZh', ja: 'listJa', ko: 'listKo', ar: 'listAr', ru: 'listRu' };
+    let on = q.langs ? Object.keys(KEYS).filter(l => q.langs[l]) : (q.language === 'vi' ? ['vi'] : q.language === 'en' ? ['en'] : ['vi', 'en']);
+    on = on.filter(l => (q[KEYS[l]] || []).some(x => String(x).trim()));
+    if (!on.length) return null;
+    // chọn ngôn ngữ: không lặp lại ngôn ngữ vừa viết
+    let lang;
+    if (q.random !== false) { const pool = on.length > 1 ? on.filter(l => l !== this.lastLang) : on; lang = pool[Math.floor(Math.random() * pool.length)]; }
+    else { this.langIdx = ((this.langIdx ?? -1) + 1) % on.length; lang = on[this.langIdx]; }
+    const list = (q[KEYS[lang]] || []).map(x => String(x).trim()).filter(Boolean);
+    this.recent = this.recent || {}; const rec = this.recent[lang] = this.recent[lang] || [];
     let i;
-    if (q.random !== false) {
-      // xen kẽ Việt – Anh khi chọn cả hai
-      let pool = list.map((_, k) => k).filter(k => !this.recentQuotes.includes(k));
-      if (lang === 'both' && this.lastLang) { const other = pool.filter(k => list[k][1] !== this.lastLang); if (other.length) pool = other; }
-      if (!pool.length) pool = list.map((_, k) => k);
-      i = pool[Math.floor(Math.random() * pool.length)];
-    } else { this.quoteIdx = (this.quoteIdx + 1) % list.length; i = this.quoteIdx; }
-    this.recentQuotes.push(i); while (this.recentQuotes.length > Math.min(12, Math.floor(list.length / 2))) this.recentQuotes.shift();
-    this.lastLang = list[i][1];
-    const parts = list[i][0].split(/\s+[—–]\s+|\s+-\s+(?=[^-]*$)/);
-    const text = parts[0].trim(), author = (parts[1] || '').trim();
-    return { id: this.nextId++, type: 'quote', name: '“' + text.slice(0, 28) + (text.length > 28 ? '…”' : '”'), text, author, lang: list[i][1], t: now };
+    if (q.random !== false) { let pool = list.map((_, k) => k).filter(k => !rec.includes(k)); if (!pool.length) pool = list.map((_, k) => k); i = pool[Math.floor(Math.random() * pool.length)]; }
+    else { this.qIdx = this.qIdx || {}; this.qIdx[lang] = ((this.qIdx[lang] ?? -1) + 1) % list.length; i = this.qIdx[lang]; }
+    rec.push(i); while (rec.length > Math.floor(list.length / 2)) rec.shift();
+    this.lastLang = lang;
+    // định dạng: câu gốc || nghĩa tiếng Việt — nguồn
+    let line = list[i], author = '';
+    const m = line.match(/^(.*\S)\s+[—–]\s+([^—–]+)$/); if (m) { line = m[1]; author = m[2].trim(); }
+    const [text, meaning] = line.split('||').map(x => (x || '').trim());
+    return { id: this.nextId++, type: 'quote', name: '“' + [...text].slice(0, 24).join('') + (text.length > 24 ? '…”' : '”'), text, meaning: meaning || '', author, lang, t: now };
   }
   forceQuote() { if (this.current) return false; this.lastActivity = 0; this.lastQuoteEnd = 0; this.lastJobEnd = 0; this.onChange(); return true; }
   done(j) {

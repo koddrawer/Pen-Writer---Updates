@@ -222,6 +222,8 @@ function renderTiers() {
 }
 
 // ================= TAB: Người xem & Quote
+const QL = [['vi', 'tiếng Việt'], ['en', 'tiếng Anh'], ['zh', 'tiếng Trung'], ['ja', 'tiếng Nhật'], ['ko', 'tiếng Hàn'], ['ar', 'tiếng Ả Rập'], ['ru', 'tiếng Nga']];
+const QLIST = { vi: 'list', en: 'listEn', zh: 'listZh', ja: 'listJa', ko: 'listKo', ar: 'listAr', ru: 'listRu' };
 function renderViewers() {
   const src = (k, t) => { const cb = h('input', { type: 'checkbox' }); const sync = () => { cb.checked = !!(cfg.viewers.sources || {})[k]; }; sync(); binds.push(sync);
     cb.onchange = () => setPath('viewers.sources.' + k, cb.checked); return h('label', { style: 'display:flex;gap:4px;align-items:center' }, cb, t); };
@@ -245,11 +247,16 @@ function renderViewers() {
         btn('10 người', () => { for (let i = 0; i < 10; i++) setTimeout(() => api.invoke('test:join'), i * 120); }, 'sm')))),
     card('Quote khi rảnh',
       field('quotes.enabled', 'Bật viết quote', 'bool'),
-      field('quotes.language', 'Ngôn ngữ', 'select', { options: [['both', 'Cả tiếng Việt và tiếng Anh (xen kẽ)'], ['vi', 'Chỉ tiếng Việt'], ['en', 'Chỉ tiếng Anh']] }),
+      row('Ngôn ngữ (xen kẽ)', h('div', { class: 'ctl', style: 'gap:10px;flex-wrap:wrap' }, ...QL.map(([k, t]) => {
+        const cb = h('input', { type: 'checkbox' }); const sync = () => { cb.checked = !!(cfg.quotes.langs || {})[k]; }; sync(); binds.push(sync);
+        cb.onchange = () => setPath('quotes.langs.' + k, cb.checked); return h('label', { style: 'display:flex;gap:4px;align-items:center' }, cb, t); }))),
+      field('quotes.showMeaning', 'Viết nghĩa tiếng Việt bên dưới câu nước ngoài', 'bool'),
+      field('quotes.meaningSizePct', 'Cỡ chữ phần nghĩa', 'range', { min: 30, max: 100, step: 2, unit: '%' }),
       field('quotes.afterSec', 'Viết khi vắng sau', 'number', { min: 3, unit: 'giây', tip: 'Không có ai vào phòng / tặng quà trong khoảng này' }),
       field('quotes.gapSec', 'Cách giữa 2 câu quote', 'number', { min: 0, unit: 'giây' }),
       field('quotes.random', 'Chọn ngẫu nhiên', 'bool', { tip: 'Tắt = lần lượt theo danh sách' }),
-      field('quotes.fontId', 'Font chữ', 'select', { options: () => fontOptions(true) }),
+      field('quotes.fontId', 'Font chữ Việt / Anh', 'select', { options: () => fontOptions(true) }),
+      ...QL.filter(([k]) => !['vi', 'en'].includes(k)).map(([k, t]) => field('quotes.langFonts.' + k, 'Font ' + t, 'select', { options: () => fontOptions(true) })),
       field('quotes.sizeCm', 'Cỡ chữ', 'range', { min: 0.5, max: 3, step: 0.05, unit: ' cm' }),
       field('quotes.authorSizePct', 'Cỡ tên tác giả', 'range', { min: 30, max: 100, step: 5, unit: '%' }),
       field('quotes.widthPct', 'Độ rộng khối chữ', 'range', { min: 40, max: 100, step: 2, unit: '%' }),
@@ -257,10 +264,8 @@ function renderViewers() {
       field('quotes.divider', 'Nét gạch trang trí bên dưới', 'bool'),
       field('quotes.sec', 'Viết xong trong tối đa', 'range', { min: 4, max: 40, step: 1, unit: ' giây' }),
       h('div', { class: 'btns' }, btn('Viết 1 câu ngay', () => api.invoke('test:quote'), 'pri'))),
-    card(['Danh sách quote tiếng Việt', h('small', {}, 'mỗi dòng 1 câu · tác giả sau dấu —')],
-      field('quotes.list', '', 'lines', { full: true, rows: 14 })),
-    card(['Danh sách quote tiếng Anh', h('small', {}, 'one per line · author after —')],
-      field('quotes.listEn', '', 'lines', { full: true, rows: 14 }))));
+    ...QL.map(([k, t]) => card(['Quote ' + t, h('small', {}, k === 'vi' || k === 'en' ? 'mỗi dòng 1 câu · tác giả sau dấu —' : 'câu gốc || nghĩa tiếng Việt — nguồn')],
+      field('quotes.' + QLIST[k], '', 'lines', { full: true, rows: 12 })))));
 }
 
 // ================= TAB: Giấy & ánh vàng

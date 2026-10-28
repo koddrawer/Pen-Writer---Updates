@@ -1,6 +1,6 @@
 {
-  "version": "1.3.2",
+  "version": "1.4.0",
   "minShell": "1.0.0",
-  "notes": "Sửa lỗi kết nối TikTok 'requires a Business plan': bỏ tải danh sách quà qua Euler (tên quà và số xu lấy trực tiếp từ sự kiện quà), thông báo lỗi dễ hiểu hơn",
+  "notes": "Thêm quote tục ngữ tiếng Trung, Nhật, Hàn, Ả Rập, Nga (font thư pháp riêng, kèm nghĩa tiếng Việt); chữ Ả Rập nối nét và viết từ phải sang trái; ngắt dòng cân đối; tên người xem nước ngoài cũng viết được",
   "date": "2026-10-28"
 }
