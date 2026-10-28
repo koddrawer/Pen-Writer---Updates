@@ -131,7 +131,8 @@ export class Writer {
     let L = layoutText(chain, name, cap / capR);
     if (L.width > full) { L = layoutText(chain, name, cap / capR * full / L.width); }
     const gap = Math.max(cap * 0.5, (c.gapCm ?? 0.7) / 100);
-    const center = (c.align || 'center') === 'center';
+    const oneLine = (c.align || 'line') === 'line';
+    const center = oneLine || c.align === 'center';
     const lo = side, hi = P.W - side, font = c.fontId || W.fontId;
     // chọn chỗ đặt: căn giữa -> tên đầu ở chính giữa, tên sau thêm luân phiên phải/trái để dòng luôn cân giữa tờ
     const tryPlace = (r) => {
@@ -141,9 +142,9 @@ export class Writer {
       const opts = !center ? [right] : (r.nR <= r.nL ? [right, left] : [left, right]);
       return opts.find(o => o.x >= lo - 1e-6 && o.x + L.width <= hi + 1e-6) || null;
     };
-    let spot = tryPlace(this.row);
+    let spot = oneLine ? null : tryPlace(this.row);   // mỗi người một dòng: luôn sang dòng mới
     if (!spot) {
-      const rowH = cap * 2.1;
+      const rowH = cap * (oneLine ? 1.75 : 2.1);
       const top = this.placeBlock(rowH);
       const x0 = center ? P.W / 2 - L.width / 2 : side;
       this.row = { top, base: top + cap * 1.4, x0, x1: x0, nL: 0, nR: 0, n: 0, cap, font };

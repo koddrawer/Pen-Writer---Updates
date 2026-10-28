@@ -18,7 +18,7 @@ const tier = (id, name, min, sizeCm, ornament, sec, extra = {}) => ({
 });
 
 module.exports = {
-  configVersion: 2,
+  configVersion: 3,
   tiktok: { username: '', signApiKey: '', autoConnect: false, autoReconnect: true },
   fonts: [
     builtinFont('great-vibes', 'Great Vibes (chữ ký)', 'great-vibes', 400),
@@ -60,7 +60,7 @@ module.exports = {
   // tên người xem: viết nối tiếp trên cùng một dòng, hết dòng thì xuống dòng
   viewers: {
     enabled: true, sources: { join: true, chat: false, like: false, follow: false, share: false },
-    sizeCm: 0.8, fontId: '', color: '', gapCm: 0.7, separator: 'dot', align: 'center',   // dot | dash | none ; center | left
+    sizeCm: 0.8, fontId: '', color: '', gapCm: 0.7, separator: 'dot', align: 'line',   // dot | dash | none ; line = mỗi người 1 dòng căn giữa | center | left
     display: 'nickname', maxChars: 18, dedupeMin: 30, maxQueue: 40, sec: 3,
   },
   // câu quote khi rảnh (không ai tặng quà / vào phòng)

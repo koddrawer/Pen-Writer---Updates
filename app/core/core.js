@@ -36,6 +36,8 @@ module.exports = async function start(ctx) {
   cfg.tiers = (cfg.tiers || DEFAULTS.tiers).map(t => ({ ...tierBase, voiceFiles: [], ...t }));
   // repo cập nhật đã đổi tên
   if (!cfg.update.repo || /^pen-writer-updates$/i.test(cfg.update.repo)) cfg.update.repo = DEFAULTS.update.repo;
+  // v3 (bản 1.4.3): tên người xem mặc định mỗi người một dòng, căn giữa
+  if ((saved.configVersion || 1) < 3 && cfg.viewers) cfg.viewers.align = 'line';
   cfg.configVersion = DEFAULTS.configVersion;
   let saveT = null;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => fs.writeFile(cfgFile, JSON.stringify(cfg, null, 1), () => { }), 300); };
