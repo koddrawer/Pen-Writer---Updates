@@ -29,7 +29,7 @@ function assembleWww(appDir, mobileDir, out) {
   // màn hiển thị trên điện thoại = display.html + cầu nối api (display.js được nạp khi lõi Node sẵn sàng)
   let d = noCsp(fs.readFileSync(path.join(out, 'renderer', 'display.html'), 'utf8'));
   d = d.replace('<meta charset="utf-8">', '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><link rel="stylesheet" href="./mobile.css">')
-    .replace('<script type="module" src="./js/display.js"></script>', '<script src="./js/mobile-api.js"></script>');
+    .replace('<script type="module" src="./js/display.js"></script>', '<script src="./lib/capacitor.js"></script><script src="./js/mobile-api.js"></script>');
   if (!d.includes('mobile-api.js')) throw new Error('display.html: không chèn được mobile-api.js');
   fs.writeFileSync(path.join(out, 'renderer', 'mobile.html'), d);
 }

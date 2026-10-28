@@ -4,6 +4,7 @@
   const C = window.Capacitor || {};
   const P = C.Plugins || {};
   const N = P.Nodejs || (C.registerPlugin && C.registerPlugin('Nodejs'));
+  if (!P.WebView && C.registerPlugin) C.registerPlugin('WebView');
   const listeners = {};
   const pend = new Map();
   let seq = 0, linked = false, port = 37651;
