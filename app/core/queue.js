@@ -24,7 +24,7 @@ class JobQueue {
     this.seen.set(key, now);
     if (this.seen.size > 5000) [...this.seen.entries()].sort((a, b) => a[1] - b[1]).slice(0, 1000).forEach(([k]) => this.seen.delete(k));
     const name = [...this.label(u, c.display || 'nickname')].slice(0, c.maxChars || 18).join('');
-    this.names.push({ id: this.nextId++, type: 'name', key, name, alt: u.uniqueId, source, t: now });
+    this.names.push({ id: this.nextId++, type: 'name', key, name, alt: u.uniqueId, avatar: u.avatar || '', source, t: now });
     while (this.names.length > (c.maxQueue || 40)) { this.names.shift(); this.stats.dropped++; }   // bỏ người cũ, giữ người mới
     this.onChange();
   }
@@ -40,7 +40,7 @@ class JobQueue {
       if (ex.gift === g.gift) ex.count += g.count || 1; else { ex.gift = g.gift; ex.count = g.count || 1; }
       ex.diamonds = Math.max(ex.diamonds, g.diamonds || 0); ex.total += total; ex.t = now; this.onChange(); return;
     }
-    this.donors.push({ id: this.nextId++, type: 'donor', key, name: this.label(g.user, c.display), alt: g.user.uniqueId,
+    this.donors.push({ id: this.nextId++, type: 'donor', key, name: this.label(g.user, c.display), alt: g.user.uniqueId, avatar: g.user.avatar || '',
       gift: g.gift, count: g.count || 1, diamonds: g.diamonds || 0, total, t: now, test: !!force });
     while (this.donors.length > (c.maxQueue || 60)) { this.donors.shift(); this.stats.dropped++; }
     this.names = this.names.filter(j => j.key !== key);             // người tặng không cần viết tên nhỏ nữa

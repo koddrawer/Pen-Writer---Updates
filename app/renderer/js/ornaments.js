@@ -222,3 +222,72 @@ export function buildOrnament(style, box) {
   return out;
 }
 export function ornamentPad(style) { return (ORNAMENTS[style] || ORNAMENTS.none).pad; }
+
+// ================= Khung hoa văn quanh avatar người donate – độ chi tiết tăng theo cấp 1..7
+export const FRAME_LEVELS = [
+  [0, 'Không khung'], [1, 'Cấp 1 – vòng tròn'], [2, 'Cấp 2 – vòng đôi'], [3, 'Cấp 3 – vòng đôi + hạt châu'],
+  [4, 'Cấp 4 – + cành lá hai bên'], [5, 'Cấp 5 – vành cánh hoa + hạt châu'], [6, 'Cấp 6 – vòng nguyệt quế + nơ'], [7, 'Cấp 7 – nguyệt quế + vương miện + tia sáng'],
+];
+// bán kính ngoài (theo R avatar) và phần nhô lên trên (vương miện) để tính bố cục
+export function frameExtent(level) {
+  const r = [1.0, 1.08, 1.16, 1.3, 1.42, 1.46, 1.62, 1.75][Math.max(0, Math.min(7, level | 0))];
+  return { r, top: level >= 7 ? 0.75 : 0 };
+}
+export function avatarFrame(level, cx, cy, R) {
+  const out = { strokes: [], fills: [] };
+  level = Math.max(0, Math.min(7, level | 0)); if (!level) return out;
+  const w = R * 0.035;
+  const ring = (rr, ww, n = 72) => { const p = []; for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2 - Math.PI / 2; p.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, ww]); } return p; };
+  out.strokes.push(ring(R * 1.04, w * (level >= 2 ? 1.25 : 1)));
+  if (level >= 2) out.strokes.push(ring(R * 1.12, w * 0.55));
+  if (level >= 3) {
+    const n = level >= 5 ? 32 : 24, rr = level >= 5 ? R * 1.2 : R * 1.22;
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; out.fills.push(dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, R * (i % 2 ? 0.022 : 0.032))); }
+  }
+  if (level === 4) {
+    // cành lá nhỏ hai bên phía dưới
+    for (const s of [1, -1]) {
+      const arc = []; for (let i = 0; i <= 24; i++) { const a = Math.PI / 2 + s * (0.25 + i / 24 * 1.0); arc.push([cx + Math.cos(a) * R * 1.32, cy + Math.sin(a) * R * 1.32]); }
+      out.strokes.push(taper(arc, w, 0.4, 0.15));
+      for (let k = 1; k <= 5; k++) { const { p, ang } = along(arc, k / 6); for (const side of [1, -1]) out.fills.push(leaf(p[0], p[1], ang + side * 0.6, R * 0.16, R * 0.055)); }
+    }
+  }
+  if (level >= 5 && level < 6) {
+    // vành cánh hoa (vỏ sò) bên ngoài
+    const n = 20, r0 = R * 1.3, r1 = R * 1.42; const p = [];
+    for (let i = 0; i <= n * 8; i++) { const a = i / (n * 8) * Math.PI * 2; const bump = Math.abs(Math.sin(a * n / 2)); p.push([cx + Math.cos(a) * (r0 + (r1 - r0) * bump), cy + Math.sin(a) * (r0 + (r1 - r0) * bump), w * 0.8]); }
+    out.strokes.push(p);
+  }
+  if (level >= 6) {
+    // vòng nguyệt quế hai bên, từ đáy lên gần đỉnh
+    const rw = R * 1.42;
+    for (const s of [1, -1]) {
+      const arc = []; for (let i = 0; i <= 40; i++) { const a = Math.PI / 2 + s * (0.18 + i / 40 * (level >= 7 ? 2.55 : 2.35)); arc.push([cx + Math.cos(a) * rw, cy + Math.sin(a) * rw]); }
+      out.strokes.push(taper(arc, w * 1.1, 0.5, 0.15));
+      const n = 11;
+      for (let k = 1; k <= n; k++) {
+        const t = k / (n + 0.6); const { p, ang } = along(arc, t); const len = R * (0.26 - 0.1 * t);
+        out.fills.push(leaf(p[0], p[1], ang + 0.62, len, len * 0.36), leaf(p[0], p[1], ang - 0.62, len, len * 0.36));
+      }
+    }
+    // nơ ở đáy
+    const by = cy + rw * 1.0;
+    for (const s of [1, -1]) {
+      const lp = taper(bez([cx, by], [cx + s * R * 0.32, by - R * 0.16], [cx + s * R * 0.36, by + R * 0.14], [cx, by], 18), w, 0.4, 0.4);
+      out.strokes.push(lp);
+      out.strokes.push(taper(bez([cx, by], [cx + s * R * 0.1, by + R * 0.18], [cx + s * R * 0.22, by + R * 0.3], [cx + s * R * 0.34, by + R * 0.42], 14), w, 0.6, 0.1));
+    }
+    out.fills.push(dot(cx, by, R * 0.06));
+  }
+  if (level >= 7) {
+    crown(cx, cy - R * 1.48, R * 0.95, w, out);
+    // tia sáng + hình thoi quanh vòng
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 - Math.PI / 2; if (Math.abs(Math.sin(a + Math.PI / 2)) < 0.35 && Math.cos(a + Math.PI / 2) > 0) continue;   // chừa chỗ vương miện
+      const r0 = R * 1.62, r1 = R * (i % 2 ? 1.7 : 1.78);
+      out.strokes.push([[cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, w * 0.5], [cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, w * 0.2]]);
+    }
+  }
+  return out;
+}

@@ -23,7 +23,7 @@ function deepMerge(a, b) {
 module.exports = async function start(ctx) {
   const userData = app.getPath('userData');
   const cfgFile = path.join(userData, 'config.json');
-  const dirs = { fonts: path.join(userData, 'fonts'), sounds: path.join(userData, 'sounds') };
+  const dirs = { fonts: path.join(userData, 'fonts'), sounds: path.join(userData, 'sounds'), avatars: path.join(userData, 'avatars') };
   Object.values(dirs).forEach(d => fs.mkdirSync(d, { recursive: true }));
 
   // ---------------- cấu hình
@@ -38,6 +38,13 @@ module.exports = async function start(ctx) {
   if (!cfg.update.repo || /^pen-writer-updates$/i.test(cfg.update.repo)) cfg.update.repo = DEFAULTS.update.repo;
   // v3 (bản 1.4.3): tên người xem mặc định mỗi người một dòng, căn giữa
   if ((saved.configVersion || 1) < 3 && cfg.viewers) cfg.viewers.align = 'line';
+  // v4 (bản 1.5.0): avatar + khung hoa văn tăng dần theo mức (mức thấp -> cấp 1, cao dần tới cấp 7)
+  if ((saved.configVersion || 1) < 4) {
+    const order = cfg.tiers.slice().sort((a, b) => (a.min || 0) - (b.min || 0));
+    // khung avatar cấp 7 đã có vương miện -> khung tên đổi 'royal' thành 'frame' để không lặp
+    cfg.tiers.forEach(t => { if (t.ornament === 'royal') t.ornament = 'frame'; });
+    order.forEach((t, i) => { if (!saved.tiers || !(saved.tiers.find(x => x.id === t.id) || {}).avatarFrame) { t.avatarFrame = Math.min(7, i + 1); t.avatarCm = +(2.8 + Math.min(6, i) * 0.37).toFixed(1); } });
+  }
   cfg.configVersion = DEFAULTS.configVersion;
   let saveT = null;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => fs.writeFile(cfgFile, JSON.stringify(cfg, null, 1), () => { }), 300); };
@@ -181,7 +188,7 @@ module.exports = async function start(ctx) {
   };
   const uid = (p) => p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const pick = async (kind, multi) => {
-    const filters = { audio: [{ name: 'Âm thanh', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus'] }], font: [{ name: 'Font', extensions: ['ttf', 'otf', 'woff'] }] }[kind];
+    const filters = { image: [{ name: 'Ảnh', extensions: ['png', 'jpg', 'jpeg', 'webp'] }], audio: [{ name: 'Âm thanh', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus'] }], font: [{ name: 'Font', extensions: ['ttf', 'otf', 'woff'] }] }[kind];
     const r = await dialog.showOpenDialog(W.panel, { properties: ['openFile', ...(multi ? ['multiSelections'] : [])], filters });
     return r.canceled ? [] : r.filePaths;
   };
@@ -195,10 +202,10 @@ module.exports = async function start(ctx) {
     'queue:clear': (which) => queue.clear(which),
     'queue:pause': (v) => queue.setPaused(v),
     'test:gift': (o = {}) => {
-      const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999) }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
+      const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
       addLog('gift', `[TEST] ${g.user.nickname} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`); queue.addDonor(g, true);
     },
-    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999) }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); },
+    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); },
     'test:quote': () => queue.forceQuote(),
     'tiktok:connect': (u) => tiktok.connect(u),
     'tiktok:disconnect': () => tiktok.disconnect(),
@@ -237,7 +244,26 @@ module.exports = async function start(ctx) {
     'music:remove': (file) => setCfg({ music: { files: (cfg.music.files || []).filter(f => f !== file) } }),
     'music:cmd': (cmd, arg) => toDisplay('music:cmd', { cmd, arg }),
     'voice:test': (o) => toDisplay('voice:test', o || {}),
+    // ảnh đại diện TikTok: tải 1 lần, lưu đệm trong userData/avatars
+    'avatar:get': async (url) => {
+      if (!url || !/^https?:/.test(url)) return null;
+      const key = require('crypto').createHash('sha1').update(url.replace(/[?#].*$/, '')).digest('hex').slice(0, 20);
+      try {
+        let file = ['.webp', '.jpg', '.png', '.gif'].map(e => path.join(dirs.avatars, key + e)).find(f => fs.existsSync(f));
+        if (!file) {
+          const r = await net.fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36', Referer: 'https://www.tiktok.com/' } });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const buf = Buffer.from(await r.arrayBuffer());
+          const ext = buf.slice(8, 12).toString() === 'WEBP' ? '.webp' : buf[0] === 0x89 ? '.png' : buf.slice(0, 3).toString() === 'GIF' ? '.gif' : '.jpg';
+          file = path.join(dirs.avatars, key + ext); fs.writeFileSync(file, buf);
+          // dọn bớt khi quá 2000 ảnh
+          const all = fs.readdirSync(dirs.avatars); if (all.length > 2000) all.slice(0, 500).forEach(f => { try { fs.unlinkSync(path.join(dirs.avatars, f)); } catch { } });
+        }
+        return 'media://local/' + encodeURIComponent(file);
+      } catch (e) { addLog('err', 'Không tải được avatar: ' + e.message); return null; }
+    },
     'tts:google': async (text, lang) => { try { return { file: await tts.google(text, lang) }; } catch (e) { addLog('err', 'Giọng Google lỗi: ' + e.message); return { error: e.message }; } },
+    'test:pickAvatar': async () => { const f = await pick('image', false); if (f[0]) setCfg({ testAvatar: 'media://local/' + encodeURIComponent(f[0]) }); return f[0] || null; },
     'files:exists': (files) => files.map(f => fs.existsSync(f)),
     'paper:new': () => toDisplay('display:cmd', { cmd: 'newSheet' }),
     'paper:clear': () => toDisplay('display:cmd', { cmd: 'clearSheet' }),

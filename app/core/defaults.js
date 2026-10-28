@@ -14,11 +14,12 @@ const tier = (id, name, min, sizeCm, ornament, sec, extra = {}) => ({
   subSizePct: 42,
   color: '', ornColor: '',  // trống = màu mực chung
   voiceFiles: [], ttsText: '',
+  avatarCm: 3, avatarFrame: 1,   // ảnh đại diện vẽ phía trên tên + cấp khung hoa văn (0–7)
   ...extra,
 });
 
 module.exports = {
-  configVersion: 3,
+  configVersion: 4,
   tiktok: { username: '', signApiKey: '', autoConnect: false, autoReconnect: true },
   fonts: [
     builtinFont('great-vibes', 'Great Vibes (chữ ký)', 'great-vibes', 400),
@@ -44,18 +45,20 @@ module.exports = {
     gapAfterSec: 0.6,       // nghỉ giữa 2 người
   },
   tiers: [
-    tier('t1', 'Mức 1 xu', 1, 1.1, 'none', 4),
-    tier('t2', 'Mức 2', 5, 1.4, 'underline', 5),
-    tier('t3', 'Mức 3', 10, 1.7, 'swash', 6),
-    tier('t4', 'Mức 4', 30, 2.0, 'vines', 7, { sub: '{gift} x{count}' }),
-    tier('t5', 'Mức 5', 99, 2.4, 'laurel', 8, { sub: '{gift} x{count}', ornColor: '#7a5a1c' }),
-    tier('t6', 'Mức 6', 299, 2.8, 'frame', 10, { sub: 'Cảm ơn bạn đã tặng {gift} x{count}', ornColor: '#7a5a1c' }),
-    tier('t7', 'Mức 7', 999, 3.3, 'royal', 12, { sub: 'Cảm ơn bạn đã tặng {gift} x{count}', ornColor: '#8a6418' }),
+    tier('t1', 'Mức 1 xu', 1, 1.1, 'none', 4, { avatarCm: 2.8, avatarFrame: 1 }),
+    tier('t2', 'Mức 2', 5, 1.4, 'underline', 5, { avatarCm: 3.1, avatarFrame: 2 }),
+    tier('t3', 'Mức 3', 10, 1.7, 'swash', 6, { avatarCm: 3.4, avatarFrame: 3 }),
+    tier('t4', 'Mức 4', 30, 2.0, 'vines', 7, { sub: '{gift} x{count}', avatarCm: 3.7, avatarFrame: 4 }),
+    tier('t5', 'Mức 5', 99, 2.4, 'laurel', 8, { sub: '{gift} x{count}', ornColor: '#7a5a1c', avatarCm: 4.1, avatarFrame: 5 }),
+    tier('t6', 'Mức 6', 299, 2.8, 'frame', 10, { sub: 'Cảm ơn bạn đã tặng {gift} x{count}', ornColor: '#7a5a1c', avatarCm: 4.5, avatarFrame: 6 }),
+    tier('t7', 'Mức 7', 999, 3.3, 'frame', 12, { sub: 'Cảm ơn bạn đã tặng {gift} x{count}', ornColor: '#8a6418', avatarCm: 5, avatarFrame: 7 }),
   ],
   sheet: {
     marginTopCm: 2.4, marginBottomCm: 2.2, marginSideCm: 1.5, lineGapCm: 0.5,
     swapSec: 2.2, tint: '#f4ede0', grain: 1, pxPerM: 4200,
   },
+  // ảnh đại diện: bút vẽ lại avatar TikTok kiểu ký hoạ đan nét, tên viết ngay bên dưới
+  avatars: { enabled: true, donors: true, viewers: true, viewerCm: 2.3, viewerFrame: 0, detail: 1.15, color: '', donorSec: 5, viewerSec: 3 },
   glow: { enabled: true, sec: 2.4, color: '#ffc94a', strength: 1.2, types: { donor: true, name: false, quote: false } },
   // tên người xem: viết nối tiếp trên cùng một dòng, hết dòng thì xuống dòng
   viewers: {

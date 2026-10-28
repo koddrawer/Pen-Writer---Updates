@@ -1,6 +1,7 @@
 // Lập kế hoạch dòng chữ (tên + nội dung + hoa văn theo mức donate) và điều khiển ngòi bút: nhấc/hạ, di chuyển, viết, thay giấy.
 import { layoutText, textToStrokes, sanitize, hasRenderable, hatch, simplify, wrapText } from './text.js';
-import { buildOrnament, ornamentPad } from './ornaments.js';
+import { buildOrnament, ornamentPad, avatarFrame, frameExtent } from './ornaments.js';
+import { avatarStrokes, silhouetteStrokes } from './avatar.js';
 
 const LIFT = 0.008;
 
@@ -61,8 +62,23 @@ export class Writer {
       blockH = (pad.t + pad.b) * cap + asc + desc + (Ls ? cap * 0.22 + sasc + sdesc : 0);
     };
     measure();
+    // avatar + khung hoa văn phía trên tên
+    const A = C.avatars || {};
+    let av = null, avH = 0;
+    if (A.enabled !== false && A.donors !== false) {
+      const lvl = tier.avatarFrame ?? 0; const ext = frameExtent(lvl);
+      let D = (tier.avatarCm ?? 3) / 100;
+      const avOf = (d) => (d / 2) * (2 * ext.r + ext.top) + cap * 0.45;
+      // ưu tiên giữ cỡ avatar: thu nhỏ chữ trước, chưa đủ chỗ mới thu nhỏ avatar
+      while (blockH + avOf(D) > limit - top0 && k++ < 6) { cap *= 0.9; measure(); }
+      const room = limit - top0 - blockH - cap * 0.45;
+      D = Math.max(0.008, Math.min(D, 2 * room * 0.98 / (2 * ext.r + ext.top)));
+      av = await this.avatarPlan(job, D, lvl); this.avSec = A.donorSec ?? 5;
+      avH = av.up + av.down + cap * 0.45;
+    }
     // cao quá cả tờ giấy: thu nhỏ
-    while (blockH > limit - top0 && k++ < 12) { cap *= 0.88; measure(); }
+    while (blockH + avH > limit - top0 && k++ < 12) { cap *= 0.88; measure(); }
+    blockH += avH;
 
     const gap = (S.lineGapCm ?? 0.5) / 100;
     let top = this.used > 0 ? this.used + gap : top0;
@@ -76,7 +92,8 @@ export class Writer {
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
 
     const cx = W.align === 'left' ? side + pad.s * cap + L.width / 2 : W.align === 'right' ? P.W - side - pad.s * cap - L.width / 2 : P.W / 2;
-    const textTop = top + pad.t * cap;
+    if (av) this.queueAvatar(av, cx, top + av.up, A.color || W.inkColor || '#16121c', tier.ornColor || tier.color || W.inkColor || '#16121c', W.speed || 0.16);
+    const textTop = top + avH + pad.t * cap;
     const jit = W.jitter !== false ? (Math.random() - 0.5) * cap * 0.06 : 0;
     const base = textTop + asc + jit;
     const ox = cx - (L.bbox.x0 + L.bbox.x1) / 2;
@@ -107,6 +124,31 @@ export class Writer {
     }
     return true;
   }
+  // ---- avatar: tải ảnh, đổi thành nét đan chéo (toạ độ tương đối quanh tâm 0,0)
+  async avatarPlan(job, D, level) {
+    const A = this.cfg().avatars || {};
+    let url = job.avatar || '';
+    if (/^https?:/.test(url) && window.api) { try { url = await window.api.invoke('avatar:get', url) || ''; } catch { url = ''; } }
+    let art = null;
+    if (url) { try { art = await avatarStrokes(url, { cx: 0, cy: 0, D, detail: A.detail ?? 1.15 }); } catch (e) { console.warn('avatar lỗi', e); } }
+    if (!art || !art.strokes.length) art = silhouetteStrokes({ cx: 0, cy: 0, D });
+    const ext = frameExtent(level);
+    const R = D / 2;
+    return { art, level, R, up: R * ext.r + R * ext.top, down: R * ext.r };
+  }
+  queueAvatar(av, cx, cy, ink, frameInk, speed) {
+    this.queue(av.art.strokes.map(s => s.map(([u, v]) => [cx + u, cy + v])), av.art.nib, speed, ink);
+    if (av.level > 0) {
+      const o = avatarFrame(av.level, cx, cy, av.R); const fn = Math.max(0.0003, av.R * 0.03);
+      for (const st of o.strokes) this.steps.push(this.mk(st.map(p => [p[0], p[1], p[2] ?? fn]), fn, speed * 1.3, frameInk));
+      for (const poly of o.fills) {
+        const hs = hatch([poly.map(p => [p[0], -p[1]])], fn * 0.8, 0.6).map(h => h.map(p => [p[0], -p[1]]));
+        for (const h of hs) this.steps.push(this.mk(h, fn, speed * 1.3, frameInk));
+        this.steps.push(this.mk(simplify(poly, fn * 0.3), fn, speed * 1.3, frameInk));
+      }
+    }
+  }
+
   // vị trí khối mới: dưới dòng đã viết, hết chỗ thì thay giấy
   placeBlock(blockH) {
     const S = this.cfg().sheet; const P = this.d.P;
@@ -143,18 +185,25 @@ export class Writer {
       return opts.find(o => o.x >= lo - 1e-6 && o.x + L.width <= hi + 1e-6) || null;
     };
     let spot = oneLine ? null : tryPlace(this.row);   // mỗi người một dòng: luôn sang dòng mới
+    // avatar người xem (kiểu mỗi người một dòng): vẽ phía trên tên
+    const A = C.avatars || {};
+    let av = null;
+    if (oneLine && A.enabled !== false && A.viewers !== false) { av = await this.avatarPlan(job, (A.viewerCm ?? 1.8) / 100, A.viewerFrame ?? 0); this.avSec = A.viewerSec ?? 3; }
+    const avH = av ? av.up + av.down + cap * 0.35 : 0;
     if (!spot) {
-      const rowH = cap * (oneLine ? 1.75 : 2.1);
+      const rowH = cap * (oneLine ? 1.75 : 2.1) + avH;
       const top = this.placeBlock(rowH);
       const x0 = center ? P.W / 2 - L.width / 2 : side;
-      this.row = { top, base: top + cap * 1.4, x0, x1: x0, nL: 0, nR: 0, n: 0, cap, font };
+      this.row = { top, base: top + avH + cap * 1.4, x0, x1: x0, nL: 0, nR: 0, n: 0, cap, font };
       spot = { side: 'first', x: x0 };
+      if (av) this.pendingAv = { av, cx: P.W / 2, cy: top + av.up };
     }
     const row = this.row;
     const ink = c.color || W.inkColor || '#16121c';
     const nib = Math.max(0.0003, (W.nibMm ?? 0.85) / 1000 * cap * 100);
     const jit = W.jitter !== false ? (Math.random() - 0.5) * cap * 0.08 : 0;
     this.steps.push({ k: 'call', fn: () => this.sheet.trackStart() });
+    if (this.pendingAv) { const p = this.pendingAv; this.pendingAv = null; this.queueAvatar(p.av, p.cx, p.cy, A.color || W.inkColor || '#16121c', ink, W.speed || 0.16); }
     const x = spot.x;
     // tên trước, dấu ngăn cách sau (nằm giữa tên mới và phần đã viết)
     const ox = x - L.bbox.x0;
@@ -242,12 +291,12 @@ export class Writer {
   async start(job) {
     this.job = job; this.busy = true; this.steps = []; this.planning = true;
     let ok = false;
-    this.tier = null; this.jobSec = 6;
+    this.tier = null; this.jobSec = 6; this.avSec = 0;
     try { ok = job.type === 'name' ? await this.planName(job) : job.type === 'quote' ? await this.planQuote(job) : await this.planDonor(job); }
     catch (e) { console.error('plan lỗi', e); }
     this.planning = false;
     if (!ok) { this.busy = false; this.job = null; return false; }
-    this.fitTime(job.type === 'donor' ? (this.tier?.sec ?? 6) : this.jobSec);
+    this.fitTime(job.type === 'donor' ? (this.tier?.sec ?? 6) + (this.avSec || 0) : this.jobSec + (this.avSec || 0));
     this.steps.push({ k: 'done' });
     this.hooks.onJobStart && this.hooks.onJobStart(job, this.tier);
     return true;

@@ -19,7 +19,10 @@ class TikTok {
   set(s) { this.status = { ...this.status, ...s }; this.on.status(this.status); }
   user(d) {
     const u = d.user || d;
-    return { uniqueId: u.uniqueId || u.displayId || '', nickname: u.nickname || u.nickName || '', avatar: (u.profilePicture && (u.profilePicture.url || u.profilePicture.urls || [])[0]) || u.profilePictureUrl || '' };
+    // ảnh đại diện: schema v3 (avatarMedium/Thumb.urlList), bỏ định dạng .heic (Chromium không đọc được)
+    const urls = [u.avatarMedium, u.avatarLarge, u.avatarThumb, u.profilePicture].flatMap(m => (m && (m.urlList || m.urls || (m.url ? [].concat(m.url) : []))) || []);
+    const avatar = urls.find(x => x && !/\.heic/i.test(x)) || urls[0] || u.profilePictureUrl || '';
+    return { uniqueId: u.uniqueId || u.displayId || '', nickname: u.nickname || u.nickName || '', avatar };
   }
   async connect(username) {
     username = String(username || this.cfg().tiktok.username || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?tiktok\.com\/@/, '').replace(/\/live.*$/, '');

@@ -1,5 +1,5 @@
 // Bảng điều khiển Pen Writer
-import { ORNAMENTS, buildOrnament, ornamentPad } from './ornaments.js';
+import { ORNAMENTS, buildOrnament, ornamentPad, avatarFrame, FRAME_LEVELS, frameExtent } from './ornaments.js';
 const api = window.api;
 let cfg = await api.getConfig();
 const $ = (s, r = document) => r.querySelector(s);
@@ -160,6 +160,21 @@ function ornPreview(cv, t) {
   c.font = `${k * 1.3}px ${ff(fid)}`; c.fillText(text, ox, oy);
   if (t.sub) { c.fillStyle = t.ornColor || t.color || cfg.writer.inkColor; c.font = `${k * 0.42 * 1.3}px ${ff(fid)}`; c.fillText(t.sub.replace('{gift}', 'Rose').replace('{count}', '1').replace('{name}', text).replace('{coins}', t.min), ox, oy + k * 0.95); }
 }
+// xem trước khung avatar
+function framePreview(cv, t) {
+  const c = cv.getContext('2d'); const S = cv.width = cv.height = 220;
+  c.fillStyle = '#efe6d2'; c.fillRect(0, 0, S, S);
+  const lvl = t.avatarFrame ?? 0; const ext = frameExtent(lvl);
+  const R = S * 0.92 / (2 * ext.r + ext.top) ; const cx = S / 2, cy = S / 2 + R * ext.top / 2;
+  // mặt người giản lược
+  c.fillStyle = '#d9cdb6'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#9b8c75'; c.beginPath(); c.arc(cx, cy - R * 0.2, R * 0.32, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(cx, cy + R * 0.75, R * 0.62, R * 0.45, 0, Math.PI, 0); c.fill();
+  const o = avatarFrame(lvl, cx, cy, R); const col = t.ornColor || t.color || cfg.writer.inkColor;
+  c.strokeStyle = c.fillStyle = col; c.lineCap = 'round';
+  for (const st of o.strokes) for (let i = 1; i < st.length; i++) { c.lineWidth = Math.max(1, st[i][2] || R * 0.03); c.beginPath(); c.moveTo(st[i - 1][0], st[i - 1][1]); c.lineTo(st[i][0], st[i][1]); c.stroke(); }
+  for (const f of o.fills) { c.beginPath(); f.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.fill(); }
+}
 function renderTiers() {
   const wrap = h('div', { class: 'tiers' });
   const draw = () => {
@@ -172,13 +187,17 @@ function renderTiers() {
       };
       const nm = h('input', { type: 'text', value: t0.name }); nm.onchange = () => api.invoke('tier:set', id, { name: nm.value });
       const cv = h('canvas', { class: 'ornprev' });
-      setTimeout(() => ornPreview(cv, T()), 30);
+      const fcv = h('canvas', { style: 'width:110px;height:110px;border-radius:8px;flex:none' });
+      setTimeout(() => { ornPreview(cv, T()); framePreview(fcv, T()); }, 30);
       const voices = h('div', { class: 'list', style: 'max-height:120px' });
       const drawVoices = () => voices.replaceChildren(...((T().voiceFiles || []).length ? T().voiceFiles.map(f => h('div', { class: 'item' }, h('span', { class: 'grow' }, fname(f)), btn('×', () => api.invoke('tier:removeVoice', id, f), 'sm red'))) : [h('div', { class: 'hint' }, 'Chưa có file voice riêng cho mức này')]));
       drawVoices();
       return h('div', { class: 'card tier' },
         h('h3', {}, nm, h('span', { class: 'ctl' }, control(() => T().enabled !== false, (v) => api.invoke('tier:set', id, { enabled: v }), 'bool'))),
         cv,
+        h('div', { style: 'display:flex;gap:12px;align-items:center' }, fcv, h('div', { style: 'flex:1' },
+          tf('avatarFrame', 'Khung avatar', 'select', { num: true, options: FRAME_LEVELS }),
+          tf('avatarCm', 'Cỡ avatar', 'range', { min: 1.5, max: 7, step: 0.1, unit: ' cm' }))),
         tf('min', 'Từ bao nhiêu xu', 'number', { min: 0, unit: 'xu trở lên', tip: 'Tổng xu của lần tặng (đã gộp combo)' }),
         tf('sizeCm', 'Cỡ chữ', 'range', { min: 0.5, max: 6, step: 0.1, unit: ' cm' }),
         tf('ornament', 'Hoa văn', 'select', { options: Object.entries(ORNAMENTS).map(([k, v]) => [k, v.name]) }),
@@ -198,7 +217,7 @@ function renderTiers() {
     }));
   };
   let sig = '';
-  const redraw = () => { const s = JSON.stringify(cfg.tiers.map(t => [t.id, t.voiceFiles])) + cfg.fonts.length; if (s !== sig) { sig = s; draw(); } else wrap.querySelectorAll('.tier').forEach((el, i) => { const t = cfg.tiers[i]; if (t) ornPreview(el.querySelector('canvas'), t); }); };
+  const redraw = () => { const s = JSON.stringify(cfg.tiers.map(t => [t.id, t.voiceFiles])) + cfg.fonts.length; if (s !== sig) { sig = s; draw(); } else wrap.querySelectorAll('.tier').forEach((el, i) => { const t = cfg.tiers[i]; if (!t) return; const cs = el.querySelectorAll('canvas'); ornPreview(cs[0], t); if (cs[1]) framePreview(cs[1], t); }); };
   binds.push(redraw);
   $('#tab-tiers').replaceChildren(h('div', { class: 'grid', style: 'margin-bottom:14px' },
     card('Chữ viết chung',
@@ -216,7 +235,20 @@ function renderTiers() {
       field('writer.maxQueue', 'Hàng chờ tối đa', 'number', { min: 5 }),
       field('writer.gapAfterSec', 'Nghỉ giữa 2 người', 'range', { min: 0, max: 5, step: 0.1, unit: ' giây' }),
       note('Mã dùng trong nội dung: {name} tên · {gift} tên quà · {count} số lượng · {coins} tổng xu · {date} ngày.'),
-      h('div', { class: 'btns' }, btn('+ Thêm mức', () => api.invoke('tier:add'), 'pri'), btn('Khôi phục mức mặc định', () => { if (confirm('Khôi phục 7 mức mặc định?')) api.invoke('tier:reset'); }, 'red')))),
+      h('div', { class: 'btns' }, btn('+ Thêm mức', () => api.invoke('tier:add'), 'pri'), btn('Khôi phục mức mặc định', () => { if (confirm('Khôi phục 7 mức mặc định?')) api.invoke('tier:reset'); }, 'red'))),
+    card('Ảnh đại diện (avatar)',
+      note('Bút vẽ lại avatar TikTok kiểu ký hoạ đan nét, tên viết ngay bên dưới. Người donate có khung hoa văn quanh avatar, chi tiết tăng theo mức (chỉnh ở từng mức bên dưới).'),
+      field('avatars.enabled', 'Bật vẽ avatar', 'bool'),
+      field('avatars.donors', 'Vẽ avatar người donate', 'bool'),
+      field('avatars.viewers', 'Vẽ avatar người xem', 'bool', { tip: 'Áp dụng khi tên người xem viết kiểu mỗi người một dòng' }),
+      field('avatars.viewerCm', 'Cỡ avatar người xem', 'range', { min: 1, max: 5, step: 0.1, unit: ' cm' }),
+      field('avatars.viewerFrame', 'Khung avatar người xem', 'select', { num: true, options: FRAME_LEVELS }),
+      field('avatars.detail', 'Độ chi tiết nét vẽ', 'range', { min: 0.6, max: 1.8, step: 0.05, unit: '×', tip: 'Cao = nhiều nét hơn, giống ảnh hơn nhưng vẽ lâu hơn' }),
+      field('avatars.color', 'Màu mực vẽ avatar', 'color', { clearable: true, def: cfg.writer.inkColor }),
+      field('avatars.donorSec', 'Thời gian vẽ avatar donate', 'range', { min: 1, max: 20, step: 0.5, unit: ' giây' }),
+      field('avatars.viewerSec', 'Thời gian vẽ avatar người xem', 'range', { min: 1, max: 15, step: 0.5, unit: ' giây' }),
+      h('div', { class: 'btns' }, btn('Chọn ảnh thử', async () => { const f = await api.invoke('test:pickAvatar'); if (f) toast('Các lượt thử sẽ dùng ảnh này làm avatar'); }, 'sm'),
+        btn('Bỏ ảnh thử', () => setPath('testAvatar', ''), 'sm red')))),
   wrap);
   draw(); sig = JSON.stringify(cfg.tiers.map(t => [t.id, t.voiceFiles])) + cfg.fonts.length;
 }
