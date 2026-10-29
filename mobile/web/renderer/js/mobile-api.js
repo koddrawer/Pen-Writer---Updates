@@ -102,12 +102,25 @@
   };
   window.__mpanel = panel;
   function setupHotspot() {
+    // cách 1: chạm/nhấp 2 lần vào góc trên bên phải
     const hs = document.createElement('div'); hs.id = 'mhot'; document.body.appendChild(hs);
     let last = 0;
-    hs.addEventListener('pointerdown', (e) => { e.preventDefault(); const t = Date.now(); if (t - last < 450) { last = 0; panel.open(); } else last = t; });
+    hs.addEventListener('pointerdown', (e) => { e.preventDefault(); const t = Date.now(); if (t - last < 500) { last = 0; panel.open(); } else last = t; });
+    // cách 2: giữ ngón tay / giữ chuột ở bất kỳ đâu 1,5 giây (không di chuyển)
+    let lp = null, sx = 0, sy = 0, t0 = 0;
+    const cancel = () => { clearTimeout(lp); lp = null; };
+    document.addEventListener('pointerdown', (e) => { if (panel.el && panel.el.classList.contains('on')) return; sx = e.clientX; sy = e.clientY; t0 = Date.now(); cancel(); lp = setTimeout(() => { lp = null; panel.open(); }, 1500); }, true);
+    document.addEventListener('pointermove', (e) => { if (lp && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) cancel(); }, true);
+    document.addEventListener('pointerup', () => { const hold = lp && Date.now() - t0 >= 1400; cancel(); if (hold) panel.open(); }, true); document.addEventListener('pointercancel', cancel, true);
+    // cách 3: bàn phím (giả lập LDPlayer/BlueStacks, bàn phím Bluetooth): phím P hoặc F1 mở/đóng, Esc đóng
+    document.addEventListener('keydown', (e) => {
+      const k = (e.key || '').toLowerCase();
+      if (k === 'p' || k === 'f1') { e.preventDefault(); panel.el && panel.el.classList.contains('on') ? panel.close() : panel.open(); }
+      else if (k === 'escape') panel.close();
+    });
     const hint = document.createElement('div'); hint.id = 'mhint';
-    hint.textContent = 'Chạm 2 lần vào góc trên bên phải để mở bảng điều khiển';
-    document.body.appendChild(hint); setTimeout(() => hint.classList.add('off'), 5000);
+    hint.textContent = 'Mở bảng điều khiển: giữ 1,5 giây trên màn hình, hoặc chạm 2 lần góc trên phải, hoặc phím P';
+    document.body.appendChild(hint); setTimeout(() => hint.classList.add('off'), 8000);
   }
   document.addEventListener('backbutton', () => panel.close());
 
