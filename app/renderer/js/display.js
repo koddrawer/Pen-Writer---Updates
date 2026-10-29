@@ -81,6 +81,8 @@ const dust = new Dust(scene, { center: desk.sheetCenter, sunDir });
 // ---- camera
 const DEFAULT_CAMS = { main: { ...meta.camera } };
 const camOf = (name) => (cfg.display.cameras && cfg.display.cameras[name]) || DEFAULT_CAMS[name] || DEFAULT_CAMS.main;
+// dừng quán tính (damping) để camera đứng yên ngay khi khoá
+function stopInertia() { const d = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.enableDamping = d; }
 function applyCam(c) { camera.position.fromArray(c.pos); controls.target.fromArray(c.target); camera.fov = c.fov || 20; camera.updateProjectionMatrix(); controls.update(); }
 let tween = null;
 function tweenCam(c, sec = 1.4) {
@@ -103,6 +105,8 @@ function applyDisplayCfg() {
   $('vig').style.opacity = String(d.vignette ?? 0.45);
   dust.set(d.dust || {});
   controls.enabled = d.mouseCamera !== false && !rotated();   // xoay khung: chỉnh camera ở chế độ thường
+  if (!controls.enabled) stopInertia();
+  try { updateCamBar(); } catch { }   // lần đầu (trước khi tạo thanh camera) bỏ qua
   document.body.classList.toggle('drag', !!d.dragWindow);
 }
 // xoay 90°: cửa sổ ngang 16:9 chứa khung dọc 9:16 (để màn hình Full HD vẫn xuất được 1080×1920 sắc nét)
@@ -181,9 +185,55 @@ api.on('display:cmd', (m) => {
   if (m.cmd === 'glowTest') { const g = cfg.glow || {}; desk.sheet.glow(desk.sheet.lastBox, { sec: g.sec ?? 2.4, color: g.color || '#ffc94a', strength: g.strength ?? 1.2 }); }
   if (m.cmd === 'camera') tweenCam(camOf(m.name || 'main'), m.sec ?? 1.2);
   if (m.cmd === 'resetCamera') { tweenCam(DEFAULT_CAMS.main, 1); api.send('display:camera', { name: 'main', cam: null }); }
-  if (m.cmd === 'saveCamera') api.send('display:camera', { name: 'main', cam: { pos: camera.position.toArray().map(r4), target: controls.target.toArray().map(r4), fov: camera.fov } });
+  if (m.cmd === 'saveCamera') saveCam();
+  if (m.cmd === 'camMode') setCamMode(m.mode);
+  if (m.cmd === 'zoom') zoomCam(m.f || 1);
 });
 const r4 = v => Math.round(v * 1e4) / 1e4;
+
+// ---- chỉnh camera: xoay / di chuyển (kéo ngang dọc) / zoom; khoá lại để không lỡ tay làm lệch khi live
+let camMode = 'rotate';
+function setCamMode(m) {
+  camMode = m;
+  const pan = m === 'pan';
+  controls.mouseButtons = { LEFT: pan ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: pan ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN };
+  controls.touches = { ONE: pan ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  if (camBar) camBar.querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+}
+function zoomCam(f) {
+  const off = camera.position.clone().sub(controls.target);
+  const len = THREE.MathUtils.clamp(off.length() * f, 0.05, 20);
+  camera.position.copy(controls.target).add(off.setLength(len)); controls.update();
+}
+const saveCam = () => api.send('display:camera', { name: 'main', cam: { pos: camera.position.toArray().map(r4), target: controls.target.toArray().map(r4), fov: camera.fov } });
+// thanh công cụ camera trên màn hình (bản điện thoại: chỉ hiện khi đang mở khoá camera)
+let camBar = null;
+if (api.platform === 'android') {
+  const st = document.createElement('style');
+  st.textContent = `#camBar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:none;gap:6px;padding:6px;
+    background:rgba(20,14,9,.88);border:1px solid #6a5232;border-radius:14px;font:600 13px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);flex-wrap:wrap;justify-content:center;max-width:94vw}
+  #camBar.show{display:flex}
+  #camBar button{background:#2a2015;color:#efe3cc;border:1px solid #4a3a26;border-radius:9px;padding:9px 11px;font:inherit;white-space:nowrap}
+  #camBar button.on{background:#d6a95a;color:#1a120a;border-color:#d6a95a}
+  #camBar button.lock{background:#7a3a24;border-color:#a0533a}
+  #camBar .tip{width:100%;text-align:center;color:#a8977c;font-weight:400;font-size:11px}`;
+  document.head.appendChild(st);
+  camBar = document.createElement('div'); camBar.id = 'camBar';
+  camBar.innerHTML = `<button data-m="rotate">⟳ Xoay</button><button data-m="pan">✥ Di chuyển</button><button data-z="0.88">＋</button><button data-z="1.14">－</button>
+    <button data-a="save">💾 Lưu</button><button data-a="lock" class="lock">🔒 Khoá</button>
+    <div class="tip">Kéo 1 ngón/chuột để xoay hoặc di chuyển · 2 ngón: zoom &amp; di chuyển · Khoá xong thanh này ẩn đi</div>`;
+  document.body.appendChild(camBar);
+  camBar.addEventListener('pointerdown', e => e.stopPropagation());
+  camBar.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.m) setCamMode(b.dataset.m);
+    if (b.dataset.z) zoomCam(+b.dataset.z);
+    if (b.dataset.a === 'save') { stopInertia(); saveCam(); }
+    if (b.dataset.a === 'lock') { stopInertia(); saveCam(); api.setConfig({ display: { mouseCamera: false } }); }
+  });
+}
+function updateCamBar() { if (camBar) camBar.classList.toggle('show', controls.enabled); }
+setCamMode('rotate'); updateCamBar();
 
 // camera bám nhẹ theo ngòi bút (tuỳ chọn)
 const followOff = new THREE.Vector3(), tmp = new THREE.Vector3();
