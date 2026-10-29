@@ -1,7 +1,7 @@
 {
-  "version": "1.7.1",
+  "version": "1.7.2",
   "minShell": "1.0.0",
-  "notes": "Android: mở bảng điều khiển bằng cách giữ 1,5 giây trên màn hình, phím P/F1 (giả lập LDPlayer), hoặc chạm 2 lần góc trên phải (vùng chạm lớn hơn)",
+  "notes": "Bảng điều khiển vừa khít chiều ngang màn hình điện thoại (tab Mức donate và Font chữ không còn tràn ngang)",
   "date": "2026-10-29",
   "minAndroid": "1.0.0"
 }
