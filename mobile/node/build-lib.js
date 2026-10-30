@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CORE_SHARED = ['defaults.js', 'queue.js', 'tiktok.js', 'tts.js', 'shared.js'];
+const CORE_SHARED = ['defaults.js', 'queue.js', 'tiktok.js', 'tts.js', 'shared.js', 'edge-tts.js'];
 const CORE_MOBILE = ['mobile-core.js', 'server.js', 'updater-mobile.js', 'build-lib.js'];
 
 function cp(src, dst) { fs.rmSync(dst, { recursive: true, force: true }); fs.cpSync(src, dst, { recursive: true }); }

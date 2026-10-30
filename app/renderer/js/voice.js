@@ -53,7 +53,12 @@ export class Voice {
   async speak(text) {
     const v = this.cfg().voice || {};
     if (!text) return;
-    if ((v.engine || 'google') === 'google') {
+    const eng = v.engine || 'edge';
+    if (eng === 'edge') {
+      const r = await this.api.invoke('tts:edge', text, { voice: v.edgeVoice || 'vi-VN-HoaiMyNeural', rate: v.rate || 1, pitch: v.pitch || 0 });
+      if (r && r.file) { this.a.playbackRate = 1; await this.playFile(r.file); return; }
+    }
+    if (eng === 'edge' || eng === 'google') {
       const r = await this.api.invoke('tts:google', text, v.lang || 'vi');
       if (r && r.file) {
         this.a.playbackRate = Math.max(0.5, Math.min(2, v.rate || 1));

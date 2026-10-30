@@ -19,7 +19,7 @@ const tier = (id, name, min, sizeCm, ornament, sec, extra = {}) => ({
 });
 
 module.exports = {
-  configVersion: 4,
+  configVersion: 5,
   tiktok: { username: '', signApiKey: '', autoConnect: false, autoReconnect: true },
   fonts: [
     builtinFont('great-vibes', 'Great Vibes (chữ ký)', 'great-vibes', 400),
@@ -163,7 +163,8 @@ module.exports = {
     enabled: true,
     mode: 'tts',            // tts = đọc câu cảm ơn | files = phát file ghi âm của mức | both = file rồi đọc tên
     when: 'start',          // start = lúc bắt đầu viết | end = viết xong
-    engine: 'google',       // google (cần mạng) | system (giọng Windows)
+    engine: 'edge',         // edge (giọng neural Microsoft, tự nhiên nhất, cần mạng) | google (cần mạng) | system (giọng máy)
+    edgeVoice: 'vi-VN-HoaiMyNeural', pitch: 0,
     lang: 'vi', systemVoice: '', rate: 1, volume: 1,
     text: 'Cảm ơn {name} đã tặng {gift}',
     minDiamonds: 1,

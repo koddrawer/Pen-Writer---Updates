@@ -1,7 +1,7 @@
 {
-  "version": "1.7.3",
+  "version": "1.8.0",
   "minShell": "1.0.0",
-  "notes": "Chỉnh camera: thêm chế độ kéo để di chuyển (không chỉ xoay), nút zoom gần/xa; trên điện thoại có thanh công cụ camera và nút Khoá (tự lưu góc, chạm màn hình không làm lệch khi live)",
-  "date": "2026-10-29",
+  "notes": "Giọng đọc AI Microsoft tự nhiên hơn (Hoài My, Nam Minh, Emma, Andrew… 11 giọng), chỉnh tốc độ và cao độ; lỗi mạng tự chuyển sang Google rồi giọng máy",
+  "date": "2026-10-30",
   "minAndroid": "1.0.0"
 }

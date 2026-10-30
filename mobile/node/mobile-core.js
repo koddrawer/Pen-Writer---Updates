@@ -55,7 +55,7 @@ module.exports = async function start(ctx) {
     like: (u) => queue.addName(u, 'like'),
     gift: (g) => queue.addDonor(g),
   });
-  const tts = new TTS(path.join(dataDir, 'tts'), (u, o) => fetch(u, o));
+  const tts = new TTS(path.join(dataDir, 'tts'), (u, o) => fetch(u, o), () => { try { return req('ws'); } catch { return null; } });
   const updater = new MobileUpdater({ dataDir, running: { version: ctx.appVersion, dir: ctx.coreDir }, shellVersion: ctx.shellVersion, req });
   updater.configure(cfg.update);
   updater.onStatus((s) => emit('update:status', s));
@@ -114,6 +114,7 @@ module.exports = async function start(ctx) {
         return mediaUrl(file);
       } catch (e) { addLog('err', 'Không tải được avatar: ' + e.message); return null; }
     },
+    'tts:edge': async (text, o) => { try { return { file: mediaUrl(await tts.edge(text, o)) }; } catch (e) { addLog('err', 'Giọng Edge lỗi: ' + e.message + ' – chuyển sang Google'); return { error: e.message }; } },
     'tts:google': async (text, lang) => { try { return { file: mediaUrl(await tts.google(text, lang)) }; } catch (e) { addLog('err', 'Giọng Google lỗi: ' + e.message); return { error: e.message }; } },
     'files:exists': (files) => (files || []).map(f => fs.existsSync(f)),
     'paper:new': () => display({ cmd: 'newSheet' }),

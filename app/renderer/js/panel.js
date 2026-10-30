@@ -1,6 +1,8 @@
 // Bảng điều khiển Pen Writer
 import { ORNAMENTS, buildOrnament, ornamentPad, avatarFrame, FRAME_LEVELS, frameExtent } from './ornaments.js';
 const api = window.api;
+// giọng AI Microsoft (trùng danh sách trong core/edge-tts.js)
+const EDGE_VOICES = [['vi-VN-HoaiMyNeural', 'Hoài My – nữ (Việt)'], ['vi-VN-NamMinhNeural', 'Nam Minh – nam (Việt)'], ['en-US-EmmaMultilingualNeural', 'Emma – nữ, nhiều thứ tiếng'], ['en-US-AvaMultilingualNeural', 'Ava – nữ trẻ, nhiều thứ tiếng'], ['en-US-AndrewMultilingualNeural', 'Andrew – nam, nhiều thứ tiếng'], ['en-US-BrianMultilingualNeural', 'Brian – nam trầm, nhiều thứ tiếng'], ['en-US-JennyNeural', 'Jenny – nữ (Anh-Mỹ)'], ['en-GB-SoniaNeural', 'Sonia – nữ (Anh-Anh)'], ['zh-CN-XiaoxiaoNeural', 'Xiaoxiao – nữ (Trung)'], ['ja-JP-NanamiNeural', 'Nanami – nữ (Nhật)'], ['ko-KR-SunHiNeural', 'SunHi – nữ (Hàn)']];
 let cfg = await api.getConfig();
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, props = {}, ...kids) => {
@@ -357,14 +359,16 @@ function renderSound() {
       field('voice.mode', 'Kiểu', 'select', { options: [['tts', 'Đọc câu cảm ơn (có tên)'], ['files', 'Phát file ghi âm của mức'], ['both', 'File ghi âm rồi đọc tên']] }),
       field('voice.when', 'Phát lúc', 'select', { options: [['start', 'Bắt đầu viết'], ['end', 'Viết xong']] }),
       field('voice.text', 'Câu cảm ơn chung', 'text', { ph: 'Cảm ơn {name} đã tặng {gift}' }),
-      field('voice.engine', 'Giọng đọc', 'select', { options: [['google', 'Google (tự nhiên, cần mạng)'], ['system', 'Giọng Windows (offline)']] }),
+      field('voice.engine', 'Bộ giọng đọc', 'select', { options: [['edge', 'Giọng AI Microsoft (tự nhiên nhất, cần mạng)'], ['google', 'Google (cần mạng)'], ['system', api.platform === 'android' ? 'Giọng của máy (offline)' : 'Giọng Windows (offline)']] }),
+      field('voice.edgeVoice', 'Giọng AI', 'select', { options: EDGE_VOICES }),
+      field('voice.pitch', 'Cao độ giọng AI', 'range', { min: -30, max: 30, step: 1, unit: 'Hz' }),
       field('voice.lang', 'Ngôn ngữ', 'select', { options: [['vi', 'Tiếng Việt'], ['en', 'English'], ['zh-CN', '中文'], ['th', 'ไทย'], ['id', 'Indonesia']] }),
       field('voice.systemVoice', 'Giọng Windows', 'select', { options: voiceOpts }),
       field('voice.rate', 'Tốc độ đọc', 'range', { min: 0.6, max: 1.6, step: 0.05, unit: '×' }),
       field('voice.volume', 'Âm lượng voice', 'range', { min: 0, max: 1, step: 0.05 }),
       field('voice.minDiamonds', 'Chỉ đọc khi tặng từ', 'number', { min: 0, unit: 'xu' }),
       row('Tên thử', h('div', { class: 'ctl' }, vname, btn('Nghe thử', () => api.invoke('voice:test', { name: vname.value }), 'sm pri'))),
-      note('File ghi âm riêng cho từng mức thêm ở tab "Mức donate". Giọng Google lỗi/mất mạng sẽ tự chuyển sang giọng Windows.'))));
+      note('Giọng AI Microsoft: Hoài My/Nam Minh đọc tiếng Việt tự nhiên; các giọng "nhiều thứ tiếng" đọc được cả tên nước ngoài. Lỗi/mất mạng sẽ tự chuyển sang Google rồi giọng máy. "Ngôn ngữ" chỉ dùng cho Google/giọng máy. File ghi âm riêng cho từng mức thêm ở tab "Mức donate".'))));
   draw(); binds.push(draw);
 }
 function renderMStat(s) {

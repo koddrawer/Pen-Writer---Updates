@@ -25,6 +25,8 @@ function migrateConfig(DEFAULTS, saved) {
     cfg.tiers.forEach(t => { if (t.ornament === 'royal') t.ornament = 'frame'; });
     order.forEach((t, i) => { if (!saved.tiers || !(saved.tiers.find(x => x.id === t.id) || {}).avatarFrame) { t.avatarFrame = Math.min(7, i + 1); t.avatarCm = +(2.8 + Math.min(6, i) * 0.37).toFixed(1); } });
   }
+  // v5 (bản 1.8.0): giọng đọc mặc định chuyển từ Google sang giọng neural Edge (tự nhiên hơn)
+  if ((saved.configVersion || 1) < 5 && cfg.voice && cfg.voice.engine === 'google') cfg.voice.engine = 'edge';
   cfg.configVersion = DEFAULTS.configVersion;
   return cfg;
 }

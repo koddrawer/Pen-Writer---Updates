@@ -141,7 +141,7 @@ module.exports = async function start(ctx) {
     like: (u, n) => queue.addLikes(u, n),
     gift: (g) => queue.addDonor(g),
   });
-  const tts = new TTS(path.join(userData, 'tts'), (u, o) => net.fetch(u, o));
+  const tts = new TTS(path.join(userData, 'tts'), (u, o) => net.fetch(u, o), () => { try { return ctx.require('ws'); } catch { return null; } });
 
   // ---------------- IPC
   ipcMain.handle('config:get', () => cfg);
@@ -240,6 +240,7 @@ module.exports = async function start(ctx) {
         return 'media://local/' + encodeURIComponent(file);
       } catch (e) { addLog('err', 'Không tải được avatar: ' + e.message); return null; }
     },
+    'tts:edge': async (text, o) => { try { return { file: await tts.edge(text, o) }; } catch (e) { addLog('err', 'Giọng Edge lỗi: ' + e.message + ' – chuyển sang Google'); return { error: e.message }; } },
     'tts:google': async (text, lang) => { try { return { file: await tts.google(text, lang) }; } catch (e) { addLog('err', 'Giọng Google lỗi: ' + e.message); return { error: e.message }; } },
     'test:pickAvatar': async () => { const f = await pick('image', false); if (f[0]) setCfg({ testAvatar: 'media://local/' + encodeURIComponent(f[0]) }); return f[0] || null; },
     'files:exists': (files) => files.map(f => fs.existsSync(f)),
