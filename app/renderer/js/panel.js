@@ -403,6 +403,8 @@ function renderDisplay() {
         if (r && (r.w < want[0] - 2 || r.h < want[1] - 2)) toast(`Màn hình không đủ chỗ: cửa sổ chỉ được ${r.w}×${r.h}. Hãy bật "Xoay khung 90°" để có 1080×1920 trên màn Full HD.`);
         else toast(`Cửa sổ hiển thị: ${want[0]}×${want[1]}`);
       }, 'sm'))),
+      h('div', { class: 'btns' }, btn('⛶ Toàn màn hình (F11)', () => api.invoke('win:fullscreen'), 'sm pri')),
+      note('Máy ảo VMware/không thêm được cửa sổ ("Couldn\'t add source"): bật Toàn màn hình rồi trong LIVE Studio thêm nguồn "Màn hình" thay vì "Cửa sổ". Màn ngang 1920×1080: chọn thêm Xoay trái → khung hình phủ kín màn, trong LIVE Studio xoay nguồn 90° là được 1080×1920. Esc hoặc F11 để thoát.'),
       row('Xoay khung 90°', control(() => +cfg.display.rotate || 0, (v) => api.invoke('win:setRotate', +v), 'select', { options: [[0, 'Không xoay (cửa sổ dọc 9:16)'], [-90, 'Xoay trái (cửa sổ ngang 16:9)'], [90, 'Xoay phải (cửa sổ ngang 16:9)']] }),
         'Màn hình 1920×1080 không chứa nổi cửa sổ dọc 1080×1920. Xoay khung thì cửa sổ thành 1920×1080, trong LIVE Studio xoay nguồn lại 90° là được hình 1080×1920 sắc nét'),
       note('Màn Full HD: chọn 1080×1920 + Xoay trái → trong LIVE Studio chuột phải nguồn Window capture → Xoay 90° theo chiều kim đồng hồ (xoay phải thì chọn ngược chiều) → kéo vừa khung. Khi xoay, chỉnh camera bằng chuột tạm tắt.'),

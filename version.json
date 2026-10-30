@@ -1,7 +1,7 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "minShell": "1.0.0",
-  "notes": "PC: chạy bằng GPU (tự bật --ignore-gpu-blocklist --enable-gpu-rasterization, ưu tiên card rời), nhật ký báo trạng thái GPU; tắt được trong Hiển thị & Camera",
+  "notes": "PC: màn hiển thị toàn màn hình (F11 / nút trong Hiển thị & Camera) để LIVE Studio quay bằng nguồn Màn hình khi không thêm được cửa sổ (máy ảo VMware)",
   "date": "2026-10-30",
   "minAndroid": "1.0.0"
 }

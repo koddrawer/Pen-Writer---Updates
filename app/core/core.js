@@ -101,7 +101,34 @@ module.exports = async function start(ctx) {
     win.once('ready-to-show', () => win.show());
     remember('display', win);
     win.on('closed', () => { W.display = null; });
+    // F11: toàn màn hình (dùng nguồn "Màn hình" của LIVE Studio khi không thêm được cửa sổ, ví dụ trong máy ảo VMware); Esc thoát
+    win.webContents.on('before-input-event', (e, inp) => {
+      if (inp.type !== 'keyDown') return;
+      if (inp.key === 'F11') { e.preventDefault(); setFull(!win.__full); }
+      else if (inp.key === 'Escape' && win.__full) { e.preventDefault(); setFull(false); }
+    });
     W.display = win;
+  }
+  let prevBounds = null;
+  function setFull(on) {
+    const w = W.display; if (!w || w.isDestroyed()) return false;
+    const rot = [90, -90].includes(+cfg.display.rotate);
+    if (on) {
+      if (!w.__full) prevBounds = w.getBounds();
+      w.__full = true;
+      w.setAspectRatio(0);                         // tỉ lệ khoá 9:16 làm Windows không cho phủ kín màn hình
+      w.setFullScreen(true);
+      // dự phòng (một số trình quản lý cửa sổ / máy ảo không vào được fullscreen): phủ kín màn hình đang chứa cửa sổ
+      setTimeout(() => { if (w.isDestroyed() || !w.__full) return; const sb = screen.getDisplayMatching(prevBounds || w.getBounds()).bounds; const cb = w.getBounds();
+        if (cb.width < sb.width || cb.height < sb.height) w.setBounds(sb); }, 500);
+      w.show(); w.focus();
+    } else {
+      w.__full = false;
+      w.setFullScreen(false);
+      setTimeout(() => { if (w.isDestroyed() || w.__full) return; if (prevBounds) w.setBounds(prevBounds); w.setAspectRatio(rot ? 16 / 9 : 9 / 16); }, 400);
+    }
+    toPanel('display:full', !!on);
+    return !!on;
   }
   function createPanel() {
     const b = wcfg('panel');
@@ -212,6 +239,7 @@ module.exports = async function start(ctx) {
     'tiktok:disconnect': () => tiktok.disconnect(),
     'tiktok:status': () => tiktok.status,
     'log:get': () => log,
+    'win:fullscreen': (on) => setFull(on === undefined ? !(W.display && W.display.__full) : on),
     'win:show': () => { if (!W.display) createDisplay(); else { W.display.show(); W.display.focus(); } },
     'win:displaySize': (w, h) => { if (!W.display) return; const rot = [90, -90].includes(+cfg.display.rotate); W.display.setAspectRatio(0); W.display.setContentSize(rot ? h : w, rot ? w : h); W.display.setAspectRatio(rot ? 16 / 9 : 9 / 16); setCfg({ display: { width: w, height: h } }, { silent: true });
       const [cw, ch] = W.display.getContentSize(); return { w: cw, h: ch }; },
