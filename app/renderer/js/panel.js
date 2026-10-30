@@ -410,6 +410,7 @@ function renderDisplay() {
       field('display.alwaysOnTop', 'Luôn nằm trên', 'bool'),
       field('display.dragWindow', 'Kéo cửa sổ bằng chuột (tắt xoay camera)', 'bool'),
       field('display.renderScale', 'Độ nét render', 'range', { min: 0.5, max: 2, step: 0.25, unit: '×', tip: 'Máy yếu (GTX 1050) để 1 hoặc 0.75' }),
+      api.platform === 'android' ? null : field('display.gpuBoost', 'Tăng tốc GPU (dùng card đồ hoạ thay CPU)', 'bool', { tip: 'Chạy kèm --ignore-gpu-blocklist --enable-gpu-rasterization, ưu tiên card rời. Đổi xong tắt app mở lại để áp dụng. Trạng thái GPU xem ở nhật ký tab Tổng quan.' }),
       note('LIVE Studio: thêm nguồn Window capture, chọn cửa sổ "Pen Writer - Display".'),
       h('div', { class: 'btns' }, btn('Tải lại màn hiển thị', () => api.invoke('win:recreateDisplay')))),
     card('Camera',

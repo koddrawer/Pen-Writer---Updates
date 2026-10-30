@@ -173,6 +173,7 @@ module.exports = {
   display: {
     width: 540, height: 960, rotate: 0, frameless: false, alwaysOnTop: false, renderScale: 1,
     shadows: true, bloom: 0.35, exposure: 1.0, sun: 1, ambient: 1, lamp: true, vignette: 0.45,
+    gpuBoost: true,         // chạy kèm --ignore-gpu-blocklist --enable-gpu-rasterization (dùng GPU thay CPU)
     mouseCamera: true, followPen: 0, cameras: {}, dragWindow: false,
     penPark: { u: 0.1, v: 0.9, h: 0.04 },
     dust: { enabled: true, count: 320, size: 1, brightness: 1, speed: 1 },

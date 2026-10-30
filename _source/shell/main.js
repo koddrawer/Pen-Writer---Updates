@@ -13,6 +13,14 @@ protocol.registerSchemesAsPrivileged([
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
+// dùng GPU thay vì CPU (tắt được trong Hiển thị & Camera -> "Tăng tốc GPU")
+let gpuBoost = true;
+try { gpuBoost = (JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'config.json'), 'utf8')).display || {}).gpuBoost !== false; } catch { }
+if (gpuBoost) {
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('force_high_performance_gpu');
+}
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {

@@ -24,6 +24,17 @@ module.exports = async function start(ctx) {
   let saved = {};
   try { saved = JSON.parse(fs.readFileSync(cfgFile, 'utf8')); } catch { }
   let cfg = migrateConfig(DEFAULTS, saved);
+
+  // ---------------- tăng tốc GPU: Chromium bỏ danh sách chặn GPU + vẽ (rasterize) bằng GPU, ưu tiên card rời
+  // (giống chạy exe kèm --ignore-gpu-blocklist --enable-gpu-rasterization). Vỏ cũ chưa tự thêm cờ -> khởi động lại 1 lần kèm cờ.
+  const GPU_FLAGS = ['ignore-gpu-blocklist', 'enable-gpu-rasterization', 'force_high_performance_gpu'];
+  if (cfg.display.gpuBoost !== false && !GPU_FLAGS.every(f => app.commandLine.hasSwitch(f)) && !process.env.PW_GPU_RELAUNCH) {
+    process.env.PW_GPU_RELAUNCH = '1';
+    const args = process.argv.slice(1).filter(a => !GPU_FLAGS.some(f => a.startsWith('--' + f)));
+    app.relaunch({ args: [...args, ...GPU_FLAGS.map(f => '--' + f)] });
+    app.exit(0);
+    return;
+  }
   let saveT = null;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => fs.writeFile(cfgFile, JSON.stringify(cfg, null, 1), () => { }), 300); };
   const getCfg = () => cfg;
@@ -122,6 +133,18 @@ module.exports = async function start(ctx) {
   // ---------------- nhật ký
   const log = [];
   function addLog(kind, text) { const e = { t: Date.now(), kind, text }; log.push(e); if (log.length > 300) log.shift(); toPanel('log', e); }
+  // báo trạng thái GPU vào nhật ký (để biết app đang vẽ bằng GPU hay CPU)
+  setTimeout(async () => {
+    try {
+      const st = app.getGPUFeatureStatus();
+      const on = (v) => /^enabled/.test(v || '');
+      let gpu = '';
+      try { const info = await app.getGPUInfo('basic'); const d = (info.gpuDevice || []).find(x => x.active) || (info.gpuDevice || [])[0]; if (d) gpu = d.deviceString || d.driverVendor || ''; } catch { }
+      const ok = on(st.webgl) && on(st.gpu_compositing) && on(st.rasterization);
+      addLog(ok ? 'sys' : 'err', `GPU${gpu ? ' ' + gpu : ''}: WebGL ${st.webgl}, compositing ${st.gpu_compositing}, rasterization ${st.rasterization}` +
+        (app.commandLine.hasSwitch('ignore-gpu-blocklist') ? ' (đã bật tăng tốc GPU)' : ' (tăng tốc GPU đang tắt)'));
+    } catch { }
+  }, 2500);
   if (!process.__pwGuard) {
     process.__pwGuard = true;
     process.on('uncaughtException', (e) => { console.error(e); try { addLog('err', 'Lỗi: ' + (e && e.message || e)); } catch { } });
