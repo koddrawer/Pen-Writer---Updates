@@ -50,14 +50,14 @@ export class Voice {
     if (!this.q.length) return this.pumpGreet();
     this.busy = true; const { job, tier } = this.q.shift();
     const v = this.cfg().voice || {};
-    this.music && this.music.duck('voice');
+    this.music && this.music.duck('voice'); this.story && this.story.holdFor(true);
     try {
       const files = (tier && tier.voiceFiles) || [];
       const mode = v.mode || 'tts';
       if ((mode === 'files' || mode === 'both') && files.length) await this.playFile(files[Math.floor(Math.random() * files.length)]);
       if (mode === 'tts' || mode === 'both' || (mode === 'files' && !files.length)) await this.speak(this.text(job, tier));
     } catch (e) { console.warn('voice lỗi', e); }
-    this.music && this.music.duck(null);
+    this.music && this.music.duck(null); this.story && this.story.holdFor(false);
     this.busy = false;
     setTimeout(() => this.pump(), 150);
   }
@@ -69,9 +69,9 @@ export class Voice {
     const it = this.gq.shift();
     if (Date.now() - it.t > 20000) return this.pump();   // chờ quá lâu thì bỏ (người đó vào từ lâu rồi)
     this.busy = true;
-    this.music && this.music.duck('voice');
+    this.music && this.music.duck('voice'); this.story && this.story.holdFor(true);
     try { await this.speak(this.greetText(it.name)); } catch (e) { console.warn('voice chào lỗi', e); }
-    this.music && this.music.duck(null);
+    this.music && this.music.duck(null); this.story && this.story.holdFor(false);
     this.lastGreet = Date.now(); this.busy = false;
     setTimeout(() => this.pump(), 150);
   }

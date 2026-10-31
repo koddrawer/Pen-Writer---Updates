@@ -97,6 +97,10 @@ module.exports = async function start(ctx) {
     'music:addPaths': (items) => setCfg({ music: { files: [...(cfg.music.files || []), ...(items || []).map(x => x.path)] } }),
     'music:remove': (file) => setCfg({ music: { files: (cfg.music.files || []).filter(f => f !== file) } }),
     'music:cmd': (cmd, arg) => emit('music:cmd', { cmd, arg }),
+    'story:addPaths': (items) => setCfg({ story: { files: [...(cfg.story.files || []), ...(items || []).map(x => x.path)] } }),
+    'story:remove': (file) => setCfg({ story: { files: (cfg.story.files || []).filter(f => f !== file) } }),
+    'story:move': (file, d) => { const l = (cfg.story.files || []).slice(); const i = l.indexOf(file), j = i + d; if (i < 0 || j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; setCfg({ story: { files: l } }); },
+    'story:cmd': (cmd, arg) => emit('story:cmd', { cmd, arg }),
     'voice:test': (o) => emit('voice:test', o || {}),
     'avatar:get': async (url) => {
       if (!url || !/^https?:/.test(url)) return null;
@@ -145,6 +149,7 @@ module.exports = async function start(ctx) {
     else if (ch === 'display:ready') { queue.requeueCurrent(); addLog('sys', 'Màn hiển thị đã sẵn sàng'); }
     else if (ch === 'display:camera') { const cams = { ...(cfg.display.cameras || {}) }; if (data.cam) cams[data.name] = data.cam; else delete cams[data.name]; setCfg({ display: { cameras: cams } }); addLog('sys', data.cam ? 'Đã lưu góc camera' : 'Đã đặt lại camera'); }
     else if (ch === 'music:status') emit('music:status', data);
+    else if (ch === 'story:status') emit('story:status', data);
   };
   channel.on('rpc', onRpc);
   channel.on('send', onSend);

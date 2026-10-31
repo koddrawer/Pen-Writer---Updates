@@ -208,6 +208,7 @@ module.exports = async function start(ctx) {
     setCfg({ display: { cameras: cams } }); addLog('sys', cam ? `Đã lưu góc camera "${name}"` : `Đã đặt lại camera "${name}"`);
   });
   ipcMain.on('music:status', (_e, st) => toPanel('music:status', st));
+  ipcMain.on('story:status', (_e, st) => toPanel('story:status', st));
 
   const copyInto = (src, dir) => {
     const base = path.basename(src).replace(/[^\w.\-]+/g, '_'); let dst = path.join(dir, base); let i = 1;
@@ -272,6 +273,14 @@ module.exports = async function start(ctx) {
     },
     'music:remove': (file) => setCfg({ music: { files: (cfg.music.files || []).filter(f => f !== file) } }),
     'music:cmd': (cmd, arg) => toDisplay('music:cmd', { cmd, arg }),
+    // truyện audio
+    'story:add': async () => {
+      const files = await pick('audio', true); if (!files.length) return [];
+      setCfg({ story: { files: [...(cfg.story.files || []), ...files.filter(f => !(cfg.story.files || []).includes(f))] } }); return files;
+    },
+    'story:remove': (file) => setCfg({ story: { files: (cfg.story.files || []).filter(f => f !== file) } }),
+    'story:move': (file, d) => { const l = (cfg.story.files || []).slice(); const i = l.indexOf(file), j = i + d; if (i < 0 || j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; setCfg({ story: { files: l } }); },
+    'story:cmd': (cmd, arg) => toDisplay('story:cmd', { cmd, arg }),
     'voice:test': (o) => toDisplay('voice:test', o || {}),
     // ảnh đại diện TikTok: tải 1 lần, lưu đệm trong userData/avatars
     'avatar:get': async (url) => {

@@ -340,6 +340,16 @@ function renderSound() {
     list.replaceChildren(...(files.length ? files.map((f, i) => h('div', { class: 'item' + (ex[i] ? '' : ' missing'), title: f },
       h('span', { class: 'grow' }, fname(f)), btn('▶', () => api.invoke('music:cmd', 'track', f), 'sm'), btn('×', () => api.invoke('music:remove', f), 'sm red'))) : [h('div', { class: 'hint' }, 'Chưa có bài nào')]));
   };
+  live.sstat = h('div', { class: 'hint' }, '—');
+  const slist = h('div', { class: 'list' });
+  const sdraw = async () => {
+    const files = (cfg.story && cfg.story.files) || [];
+    const ex = files.length ? await api.invoke('files:exists', files) : [];
+    slist.replaceChildren(...(files.length ? files.map((f, i) => h('div', { class: 'item' + (ex[i] ? '' : ' missing'), title: f },
+      h('span', { class: 'grow' }, (i + 1) + '. ' + fname(f).replace(/\.[^.]+$/, '')),
+      btn('▶', () => api.invoke('story:cmd', 'track', f), 'sm'), btn('↑', () => api.invoke('story:move', f, -1), 'sm'), btn('↓', () => api.invoke('story:move', f, 1), 'sm'),
+      btn('×', () => api.invoke('story:remove', f), 'sm red'))) : [h('div', { class: 'hint' }, 'Chưa có truyện nào – bấm "+ Thêm truyện"')]));
+  };
   const vname = h('input', { type: 'text', value: 'Minh Anh' });
   const gname = h('input', { type: 'text', value: 'Lan Hương' });
   const voiceOpts = () => [['', '— tự chọn theo ngôn ngữ —'], ...(live.voices || []).map(v => [v.name, `${v.name} (${v.lang})`])];
@@ -355,6 +365,21 @@ function renderSound() {
       field('music.duckPct', 'Giảm còn', 'range', { min: 0, max: 100, step: 5, unit: '%' }),
       list, h('div', { class: 'btns' }, btn('+ Thêm nhạc', () => api.invoke('music:add'), 'pri')),
       note('Nhạc và voice phát từ cửa sổ hiển thị – trong LIVE Studio nhớ thu âm thanh của ứng dụng.')),
+    card('Kể truyện audio', live.sstat,
+      h('div', { class: 'btns' }, btn('⏮', () => api.invoke('story:cmd', 'prev')), btn('⏪ 15s', () => api.invoke('story:cmd', 'seek', -15)),
+        btn('▶ Kể', () => api.invoke('story:cmd', 'play'), 'pri'), btn('⏸ Dừng', () => api.invoke('story:cmd', 'pause')),
+        btn('15s ⏩', () => api.invoke('story:cmd', 'seek', 15)), btn('⏭', () => api.invoke('story:cmd', 'next'))),
+      field('story.enabled', 'Bật kể truyện', 'bool'),
+      field('story.autoPlay', 'Tự kể khi mở app (nghe tiếp chỗ cũ)', 'bool'),
+      field('story.order', 'Thứ tự', 'select', { options: [['list', 'Theo danh sách'], ['shuffle', 'Ngẫu nhiên']] }),
+      field('story.loop', 'Hết danh sách thì kể lại từ đầu', 'bool'),
+      field('story.gapSec', 'Nghỉ giữa 2 truyện', 'number', { min: 0, unit: 'giây' }),
+      field('story.volume', 'Âm lượng truyện', 'range', { min: 0, max: 1, step: 0.05 }),
+      field('story.musicPct', 'Nhạc nền khi đang kể còn', 'range', { min: 0, max: 100, step: 5, unit: '%' }),
+      field('story.onVoice', 'Khi có voice cảm ơn/chào', 'select', { options: [['pause', 'Dừng truyện, đọc xong kể tiếp'], ['duck', 'Chỉ nhỏ truyện lại']] }),
+      field('story.duckPct', 'Nhỏ truyện còn', 'range', { min: 0, max: 100, step: 5, unit: '%' }),
+      slist, h('div', { class: 'btns' }, btn('+ Thêm truyện', () => api.invoke('story:add'), 'pri')),
+      note('Thêm file truyện audio (mp3, m4a, wav…). App nhớ chỗ đang nghe của từng truyện, tắt mở lại vẫn kể tiếp. Truyện kể xong tự sang truyện kế; ↑↓ để đổi thứ tự.')),
     card('Voice cảm ơn',
       field('voice.enabled', 'Bật voice cảm ơn', 'bool'),
       field('voice.mode', 'Kiểu', 'select', { options: [['tts', 'Đọc câu cảm ơn (có tên)'], ['files', 'Phát file ghi âm của mức'], ['both', 'File ghi âm rồi đọc tên']] }),
@@ -379,6 +404,14 @@ function renderSound() {
       row('Tên thử', h('div', { class: 'ctl' }, gname, btn('Nghe thử', () => api.invoke('voice:test', { name: gname.value, greet: true }), 'sm pri'))),
       note('Nhiều câu chào cách nhau bằng dấu | – mỗi lần chọn ngẫu nhiên một câu, {name} là tên người vào. Dùng chung giọng đọc, tốc độ, âm lượng với voice cảm ơn (cần bật "Bật voice cảm ơn"). Lời cảm ơn donate luôn được đọc trước; phòng đông thì chỉ chào những người mới vào gần nhất.'))));
   draw(); binds.push(draw);
+  sdraw(); binds.push(sdraw);
+}
+function renderSStat(s) {
+  if (!live.sstat || !s) return;
+  const mm = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  const n = s.file ? fname(s.file).replace(/\.[^.]+$/, '') : '';
+  live.sstat.textContent = !s.enabled ? 'Kể truyện đang tắt' : !s.file ? 'Chưa kể truyện nào' : s.waiting ? `Nghỉ trước truyện kế… (vừa xong: ${n})`
+    : `${s.holding ? '⏸ nhường voice' : s.playing ? '▶' : '⏸'} ${n}  ${mm(s.t)} / ${mm(s.dur)}`;
 }
 function renderMStat(s) {
   if (!live.mstat || !s) return;
@@ -483,6 +516,7 @@ api.on('config', (c) => { const fontsChanged = JSON.stringify(c.fonts) !== JSON.
 api.on('log', addLog);
 api.on('queue', renderQueue);
 api.on('music:status', renderMStat);
+api.on('story:status', renderSStat);
 api.on('update:status', renderUpd);
 function renderTik(s) {
   const p = $('#pTik'); p.textContent = 'TikTok: ' + ({ connected: 'đã kết nối', connecting: 'đang kết nối', error: 'lỗi', disconnected: 'chưa kết nối' }[s.state] || s.state) + (s.viewers ? ` · ${s.viewers} người xem` : '');

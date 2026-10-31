@@ -29,7 +29,7 @@ function startServer({ roots, uploadDir, port = 37651 }) {
     if (u.pathname === '/upload' && req.method === 'POST') {
       // lưu file người dùng chọn (nhạc, voice, font, ảnh) vào thư mục dữ liệu của app
       const kind = (u.searchParams.get('kind') || 'files').replace(/[^\w-]/g, '');
-      const name = (u.searchParams.get('name') || 'file').replace(/[^\w.\-]+/g, '_').slice(-80);
+      const name = (u.searchParams.get('name') || 'file').replace(/[^\p{L}\p{N}._\- ]+/gu, '_').slice(-120);
       const dir = path.join(uploadDir, kind); fs.mkdirSync(dir, { recursive: true });
       let dst = path.join(dir, name); let i = 1;
       while (fs.existsSync(dst)) dst = path.join(dir, `${path.parse(name).name}_${i++}${path.extname(name)}`);

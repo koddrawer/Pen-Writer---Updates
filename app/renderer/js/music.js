@@ -69,6 +69,9 @@ export class Music {
   target() {
     const m = this.cfg().music || {}; let v = Math.max(0, Math.min(1, m.volume ?? 0.35));
     if (m.duck !== false && this.duckCat && (m.duckCats || ['greet', 'thanks']).includes(this.duckCat)) v *= (m.duckPct ?? 25) / 100;
+    // đang kể truyện: nhạc nền nhỏ lại làm nền
+    const s = this.cfg().story || {};
+    if (this.story && this.story.active() && !this.story.gapT && !this.story.a.paused) v *= (s.musicPct ?? 25) / 100;
     return v;
   }
   tick() {

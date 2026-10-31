@@ -50,6 +50,7 @@
   const FONT = '.ttf,.otf,.woff,.woff2,font/*,application/octet-stream';
   const LOCAL = {
     'fonts:add': async () => { const fs = await pick(FONT, true); return fs.length ? call('fonts:addPaths', await upload('fonts', fs)) : []; },
+    'story:add': async () => { const fs = await pick(AUDIO, true); return fs.length ? call('story:addPaths', await upload('story', fs)) : []; },
     'music:add': async () => { const fs = await pick(AUDIO, true); return fs.length ? call('music:addPaths', await upload('music', fs)) : []; },
     'tier:addVoice': async (id) => { const fs = await pick(AUDIO, true); return fs.length ? call('tier:addVoicePaths', id, await upload('voice', fs)) : []; },
     'test:pickAvatar': async () => { const fs = await pick('image/*', false); if (!fs.length) return null; const [u] = await upload('avatar', fs); if (!u) return null; await call('test:setAvatar', u.path); return u.path; },

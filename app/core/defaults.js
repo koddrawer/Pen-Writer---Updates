@@ -177,6 +177,16 @@ module.exports = {
       maxWait: 3,             // tối đa số người chờ chào (phòng đông thì bỏ bớt, chỉ chào người mới vào gần nhất)
     },
   },
+  // kể truyện audio (file mp3… người dùng thêm vào), phát lần lượt, nhớ chỗ đang nghe
+  story: {
+    enabled: true, files: [], autoPlay: true,
+    order: 'list',          // list = theo thứ tự danh sách | shuffle = ngẫu nhiên
+    loop: true,             // hết danh sách thì kể lại từ đầu
+    volume: 1, gapSec: 3,   // nghỉ giữa 2 truyện
+    musicPct: 25,           // nhạc nền nhỏ còn % khi đang kể
+    onVoice: 'pause',       // pause = dừng truyện khi đọc cảm ơn/chào rồi kể tiếp | duck = chỉ nhỏ lại
+    duckPct: 25,
+  },
   music: { enabled: true, files: [], shuffle: true, volume: 0.35, crossfadeSec: 3, duck: true, duckPct: 30, duckCats: ['voice'] },
   display: {
     width: 540, height: 960, rotate: 0, frameless: false, alwaysOnTop: false, renderScale: 1,
