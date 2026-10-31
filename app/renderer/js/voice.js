@@ -4,6 +4,7 @@ export class Voice {
     this.api = api; this.cfg = getCfg; this.music = music;
     this.a = new Audio(); this.a.preload = 'auto';
     this.q = []; this.busy = false;
+    this.gq = []; this.greeted = new Map(); this.lastGreet = 0;
     const sendVoices = () => {
       const vs = (window.speechSynthesis ? speechSynthesis.getVoices() : []).map(v => ({ name: v.name, lang: v.lang }));
       api.send('display:status', { voices: vs });
@@ -24,8 +25,29 @@ export class Voice {
     this.q.push({ job, tier });
     this.pump();
   }
+  // lời chào người mới vào phòng: hàng chờ riêng, ưu tiên thấp hơn lời cảm ơn donate
+  greet(u, force) {
+    const v = this.cfg().voice || {}; const g = v.greet || {};
+    if (!force && (!g.enabled || !v.enabled)) return;
+    const name = String(u.name || '').replace(/[^\p{L}\p{N}\s._-]/gu, '').trim().slice(0, 24);
+    if (!name) return;
+    const key = u.id || name, now = Date.now();
+    if (!force && now - (this.greeted.get(key) || 0) < (g.dedupeMin ?? 30) * 60000) return;
+    this.greeted.set(key, now);
+    if (this.greeted.size > 3000) this.greeted.clear();
+    this.gq.push({ name, t: now });
+    const max = Math.max(1, g.maxWait ?? 3);
+    while (this.gq.length > max) this.gq.shift();     // phòng đông: bỏ người vào sớm, giữ người mới nhất
+    this.pump();
+  }
+  greetText(name) {
+    const g = (this.cfg().voice || {}).greet || {};
+    const list = String(g.texts || 'Chào mừng {name} đã đến với phiên live').split('|').map(s => s.trim()).filter(Boolean);
+    return list[Math.floor(Math.random() * list.length)].replace(/\{name\}/g, name);
+  }
   async pump() {
-    if (this.busy || !this.q.length) return;
+    if (this.busy) return;
+    if (!this.q.length) return this.pumpGreet();
     this.busy = true; const { job, tier } = this.q.shift();
     const v = this.cfg().voice || {};
     this.music && this.music.duck('voice');
@@ -37,6 +59,20 @@ export class Voice {
     } catch (e) { console.warn('voice lỗi', e); }
     this.music && this.music.duck(null);
     this.busy = false;
+    setTimeout(() => this.pump(), 150);
+  }
+  async pumpGreet() {
+    if (this.busy || !this.gq.length) return;
+    const g = (this.cfg().voice || {}).greet || {};
+    const wait = (g.gapSec ?? 4) * 1000 - (Date.now() - this.lastGreet);
+    if (wait > 0) { clearTimeout(this.gT); this.gT = setTimeout(() => this.pump(), wait + 20); return; }
+    const it = this.gq.shift();
+    if (Date.now() - it.t > 20000) return this.pump();   // chờ quá lâu thì bỏ (người đó vào từ lâu rồi)
+    this.busy = true;
+    this.music && this.music.duck('voice');
+    try { await this.speak(this.greetText(it.name)); } catch (e) { console.warn('voice chào lỗi', e); }
+    this.music && this.music.duck(null);
+    this.lastGreet = Date.now(); this.busy = false;
     setTimeout(() => this.pump(), 150);
   }
   playFile(file) {

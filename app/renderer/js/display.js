@@ -175,7 +175,9 @@ api.on('config', (c) => {
   desk.setSheetOpts({ tint: ns.tint !== os.tint ? ns.tint : null, grain: ns.grain !== os.grain ? ns.grain ?? 1 : null, ink: c.writer.inkColor });
   fonts.cache.clear();
 });
+api.on('voice:greet', (u) => voice.greet(u));
 api.on('voice:test', (o) => {
+  if (o.greet) return voice.greet({ name: o.name || 'Minh Anh', id: 'test-' + Date.now() }, true);
   const tier = (cfg.tiers || []).find(t => t.id === o.tierId) || (cfg.tiers || [])[0];
   voice.say({ name: o.name || 'Minh Anh', written: o.name || 'Minh Anh', gift: o.gift || 'Hoa hồng', count: 1, total: tier ? tier.min : 1 }, tier, true);
 });

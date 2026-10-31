@@ -48,7 +48,7 @@ module.exports = async function start(ctx) {
   const queue = new JobQueue(getCfg, () => { emit('job:available', {}); emit('queue', queue.snapshot()); });
   const tiktok = new TikTok(req, getCfg, {
     status: (s) => emit('tiktok:status', s), log: addLog,
-    join: (u) => { queue.activity(); queue.addName(u, 'join'); },
+    join: (u) => { queue.activity(); queue.addName(u, 'join'); emit('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); },
     chat: (u) => { queue.activity(); queue.addName(u, 'chat'); },
     follow: (u) => { queue.activity(); queue.addName(u, 'follow'); },
     share: (u) => { queue.activity(); queue.addName(u, 'share'); },
@@ -78,7 +78,7 @@ module.exports = async function start(ctx) {
       const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
       addLog('gift', `[TEST] ${g.user.nickname} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`); queue.addDonor(g, true);
     },
-    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); },
+    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); emit('voice:greet', { name: u.nickname, id: u.uniqueId, test: true }); },
     'test:quote': () => queue.forceQuote(),
     'test:setAvatar': (p) => setCfg({ testAvatar: p ? mediaUrl(p) : '' }),
     'tiktok:connect': (u) => tiktok.connect(u),

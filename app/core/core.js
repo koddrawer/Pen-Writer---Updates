@@ -184,7 +184,7 @@ module.exports = async function start(ctx) {
   const tiktok = new TikTok(ctx.require, getCfg, {
     status: (s) => toPanel('tiktok:status', s),
     log: addLog,
-    join: (u) => queue.addName(u, 'join'),
+    join: (u) => { queue.addName(u, 'join'); toDisplay('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); },
     chat: (u) => queue.addName(u, 'chat'),
     follow: (u) => queue.addName(u, 'follow'),
     share: (u) => queue.addName(u, 'share'),
@@ -233,7 +233,7 @@ module.exports = async function start(ctx) {
       const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
       addLog('gift', `[TEST] ${g.user.nickname} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`); queue.addDonor(g, true);
     },
-    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); },
+    'test:join': (name) => { const u = { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: name || 'Khách ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }; addLog('join', `[TEST] ${u.nickname} vào phòng`); queue.addName(u, 'join', true); toDisplay('voice:greet', { name: u.nickname, id: u.uniqueId, test: true }); },
     'test:quote': () => queue.forceQuote(),
     'tiktok:connect': (u) => tiktok.connect(u),
     'tiktok:disconnect': () => tiktok.disconnect(),

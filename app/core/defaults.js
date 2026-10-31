@@ -168,6 +168,14 @@ module.exports = {
     lang: 'vi', systemVoice: '', rate: 1, volume: 1,
     text: 'Cảm ơn {name} đã tặng {gift}',
     minDiamonds: 1,
+    // lời chào người vào phòng live (đọc bằng cùng giọng; nhường cảm ơn donate đọc trước)
+    greet: {
+      enabled: true,
+      texts: 'Chào mừng {name} đã đến với phiên live | Xin chào {name}, chúc bạn xem live vui vẻ | {name} ơi, chào mừng bạn nhé',
+      dedupeMin: 30,          // 1 người chỉ được chào lại sau ngần này phút
+      gapSec: 4,              // nghỉ giữa 2 lời chào
+      maxWait: 3,             // tối đa số người chờ chào (phòng đông thì bỏ bớt, chỉ chào người mới vào gần nhất)
+    },
   },
   music: { enabled: true, files: [], shuffle: true, volume: 0.35, crossfadeSec: 3, duck: true, duckPct: 30, duckCats: ['voice'] },
   display: {

@@ -341,6 +341,7 @@ function renderSound() {
       h('span', { class: 'grow' }, fname(f)), btn('▶', () => api.invoke('music:cmd', 'track', f), 'sm'), btn('×', () => api.invoke('music:remove', f), 'sm red'))) : [h('div', { class: 'hint' }, 'Chưa có bài nào')]));
   };
   const vname = h('input', { type: 'text', value: 'Minh Anh' });
+  const gname = h('input', { type: 'text', value: 'Lan Hương' });
   const voiceOpts = () => [['', '— tự chọn theo ngôn ngữ —'], ...(live.voices || []).map(v => [v.name, `${v.name} (${v.lang})`])];
   $('#tab-sound').replaceChildren(h('div', { class: 'grid' },
     card('Nhạc nền', live.mstat,
@@ -368,7 +369,15 @@ function renderSound() {
       field('voice.volume', 'Âm lượng voice', 'range', { min: 0, max: 1, step: 0.05 }),
       field('voice.minDiamonds', 'Chỉ đọc khi tặng từ', 'number', { min: 0, unit: 'xu' }),
       row('Tên thử', h('div', { class: 'ctl' }, vname, btn('Nghe thử', () => api.invoke('voice:test', { name: vname.value }), 'sm pri'))),
-      note('Giọng AI Microsoft: Hoài My/Nam Minh đọc tiếng Việt tự nhiên; các giọng "nhiều thứ tiếng" đọc được cả tên nước ngoài. Lỗi/mất mạng sẽ tự chuyển sang Google rồi giọng máy. "Ngôn ngữ" chỉ dùng cho Google/giọng máy. File ghi âm riêng cho từng mức thêm ở tab "Mức donate".'))));
+      note('Giọng AI Microsoft: Hoài My/Nam Minh đọc tiếng Việt tự nhiên; các giọng "nhiều thứ tiếng" đọc được cả tên nước ngoài. Lỗi/mất mạng sẽ tự chuyển sang Google rồi giọng máy. "Ngôn ngữ" chỉ dùng cho Google/giọng máy. File ghi âm riêng cho từng mức thêm ở tab "Mức donate".')),
+    card('Lời chào người vào live',
+      field('voice.greet.enabled', 'Chào người mới vào phòng', 'bool'),
+      field('voice.greet.texts', 'Câu chào', 'text', { ph: 'Chào mừng {name} đã đến với phiên live | Xin chào {name}' }),
+      field('voice.greet.dedupeMin', 'Chào lại cùng người sau', 'number', { min: 0, unit: 'phút' }),
+      field('voice.greet.gapSec', 'Nghỉ giữa 2 lời chào', 'number', { min: 0, unit: 'giây' }),
+      field('voice.greet.maxWait', 'Số người chờ chào tối đa', 'number', { min: 1, max: 20 }),
+      row('Tên thử', h('div', { class: 'ctl' }, gname, btn('Nghe thử', () => api.invoke('voice:test', { name: gname.value, greet: true }), 'sm pri'))),
+      note('Nhiều câu chào cách nhau bằng dấu | – mỗi lần chọn ngẫu nhiên một câu, {name} là tên người vào. Dùng chung giọng đọc, tốc độ, âm lượng với voice cảm ơn (cần bật "Bật voice cảm ơn"). Lời cảm ơn donate luôn được đọc trước; phòng đông thì chỉ chào những người mới vào gần nhất.'))));
   draw(); binds.push(draw);
 }
 function renderMStat(s) {
