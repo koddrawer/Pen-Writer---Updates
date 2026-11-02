@@ -436,6 +436,22 @@ function renderFonts() {
 
 // ================= TAB: Hiển thị & camera
 function renderDisplay() {
+  const shotList = h('div', { class: 'list' });
+  const setShots = (fn) => api.setConfig({ display: { shots: fn((cfg.display.shots || []).map(x => ({ ...x }))) } });
+  const drawShots = () => {
+    const list = cfg.display.shots || [];
+    shotList.replaceChildren(...(list.length ? list.map((x, i) => {
+      const nm = h('input', { type: 'text', value: x.name || '' }); nm.onchange = () => setShots(l => l.map(y => y.id === x.id ? { ...y, name: nm.value } : y));
+      const on = h('input', { type: 'checkbox' }); on.checked = x.enabled !== false; on.onchange = () => setShots(l => l.map(y => y.id === x.id ? { ...y, enabled: on.checked } : y));
+      const mv = (d) => setShots(l => { const j = i + d; if (j < 0 || j >= l.length) return l; [l[i], l[j]] = [l[j], l[i]]; return l; });
+      return h('div', { class: 'item' }, on, h('span', { class: 'grow', style: 'display:flex' }, nm),
+        btn('▶', () => api.invoke('display:cmd', { cmd: 'shotGo', id: x.id }), 'sm'),
+        btn('⟳', () => api.invoke('display:cmd', { cmd: 'shotUpdate', id: x.id }), 'sm'),
+        btn('↑', () => mv(-1), 'sm'), btn('↓', () => mv(1), 'sm'),
+        btn('×', () => setShots(l => l.filter(y => y.id !== x.id)), 'sm red'));
+    }) : [h('div', { class: 'hint' }, 'Chưa có góc nào')]));
+  };
+  drawShots(); binds.push(() => { if (!shotList.contains(document.activeElement)) drawShots(); });
   $('#tab-display').replaceChildren(h('div', { class: 'grid' },
     card('Cửa sổ hiển thị 9:16',
       note('Khung hình xuất ra LIVE phải đúng độ phân giải của LIVE Studio (thường 1080×1920). Cửa sổ nhỏ hơn thì LIVE Studio phải phóng to lên → bị mờ.'),
@@ -466,6 +482,18 @@ function renderDisplay() {
         btn('＋ Gần', () => api.invoke('display:cmd', { cmd: 'zoom', f: 0.88 }), 'sm'), btn('－ Xa', () => api.invoke('display:cmd', { cmd: 'zoom', f: 1.14 }), 'sm')),
       h('p', { class: 'note' }, api.platform === 'android' ? 'Mở khoá → đóng bảng này → chỉnh trên màn hình bằng thanh công cụ ở dưới → bấm 🔒 Khoá (tự lưu góc). Khoá rồi thì chạm màn hình không làm lệch camera.' : 'Chuột trái: xoay (hoặc di chuyển nếu chọn "Kéo để di chuyển"), chuột phải: di chuyển, cuộn: zoom. Tắt ô trên để khoá camera khi live.'),
       field('display.followPen', 'Camera bám theo ngòi bút', 'range', { min: 0, max: 100, step: 5, unit: '%' })),
+    card('Tự đổi góc camera',
+      note(api.platform === 'android' ? 'Mở khoá camera → chỉnh tới góc đẹp → bấm "🎬 + Góc" trên thanh công cụ (hoặc nút bên dưới). Lặp lại cho từng góc rồi bật "Tự đổi góc".' : 'Chỉnh camera tới góc đẹp trong màn hiển thị → bấm "+ Thêm góc hiện tại". Lặp lại cho từng góc rồi bật "Tự đổi góc".'),
+      shotList,
+      h('div', { class: 'btns' }, btn('+ Thêm góc hiện tại', () => api.invoke('display:cmd', { cmd: 'shotAdd' }), 'pri'),
+        btn('⏮ Góc trước', () => api.invoke('display:cmd', { cmd: 'shotNext', dir: -1 }), 'sm'), btn('Góc sau ⏭', () => api.invoke('display:cmd', { cmd: 'shotNext', dir: 1 }), 'sm')),
+      field('display.cycle.enabled', 'Tự đổi góc', 'bool'),
+      field('display.cycle.sec', 'Mỗi góc giữ', 'number', { min: 2, unit: 'giây' }),
+      field('display.cycle.mode', 'Kiểu chuyển', 'select', { options: [['smooth', 'Lia mượt'], ['cut', 'Cắt cảnh ngay']] }),
+      field('display.cycle.moveSec', 'Thời gian lia', 'range', { min: 0.5, max: 8, step: 0.5, unit: ' giây' }),
+      field('display.cycle.order', 'Thứ tự', 'select', { options: [['list', 'Theo danh sách'], ['random', 'Ngẫu nhiên']] }),
+      field('display.cycle.donorShot', 'Khi viết tên donate', 'select', { options: () => [['none', 'Vẫn đổi góc bình thường'], ['main', 'Giữ góc chính (đã lưu)'], ...(cfg.display.shots || []).map(x => [x.id, 'Giữ ' + (x.name || 'góc')])] }),
+      note('Chỉnh camera bằng tay thì tự đổi góc tạm dừng 20 giây. Bỏ tích ô cạnh tên để tạm bỏ một góc khỏi vòng đổi.')),
     card('Ánh sáng & chất lượng',
       field('display.sun', 'Nắng qua cửa sổ', 'range', { min: 0, max: 2.5, step: 0.05, unit: '×' }),
       field('display.ambient', 'Ánh sáng phòng', 'range', { min: 0, max: 2.5, step: 0.05, unit: '×' }),

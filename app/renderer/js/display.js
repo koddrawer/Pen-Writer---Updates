@@ -193,6 +193,11 @@ api.on('display:cmd', (m) => {
   if (m.cmd === 'resetCamera') { tweenCam(DEFAULT_CAMS.main, 1); api.send('display:camera', { name: 'main', cam: null }); }
   if (m.cmd === 'saveCamera') saveCam();
   if (m.cmd === 'camMode') setCamMode(m.mode);
+  if (m.cmd === 'shotAdd') { const list = (cfg.display.shots || []).slice(); const n = list.length + 1;
+    list.push({ id: 's' + Date.now().toString(36), name: m.name || 'Góc ' + n, cam: camNow(), enabled: true }); api.setConfig({ display: { shots: list } }); }
+  if (m.cmd === 'shotUpdate') api.setConfig({ display: { shots: (cfg.display.shots || []).map(s => s.id === m.id ? { ...s, cam: camNow() } : s) } });
+  if (m.cmd === 'shotGo') { const s = (cfg.display.shots || []).find(x => x.id === m.id); if (s) { cyc.holdUntil = performance.now() + 8000; goShot(s, m.sec ?? 1.2); } }
+  if (m.cmd === 'shotNext') { cyc.holdUntil = 0; nextShot(m.dir || 1); }
   if (m.cmd === 'zoom') zoomCam(m.f || 1);
 });
 const r4 = v => Math.round(v * 1e4) / 1e4;
@@ -226,7 +231,7 @@ if (api.platform === 'android') {
   document.head.appendChild(st);
   camBar = document.createElement('div'); camBar.id = 'camBar';
   camBar.innerHTML = `<button data-m="rotate">⟳ Xoay</button><button data-m="pan">✥ Di chuyển</button><button data-z="0.88">＋</button><button data-z="1.14">－</button>
-    <button data-a="save">💾 Lưu</button><button data-a="lock" class="lock">🔒 Khoá</button>
+    <button data-a="save">💾 Lưu</button><button data-a="shot">🎬 + Góc</button><button data-a="lock" class="lock">🔒 Khoá</button>
     <div class="tip">Kéo 1 ngón/chuột để xoay hoặc di chuyển · 2 ngón: zoom &amp; di chuyển · Khoá xong thanh này ẩn đi</div>`;
   document.body.appendChild(camBar);
   camBar.addEventListener('pointerdown', e => e.stopPropagation());
@@ -235,9 +240,42 @@ if (api.platform === 'android') {
     if (b.dataset.m) setCamMode(b.dataset.m);
     if (b.dataset.z) zoomCam(+b.dataset.z);
     if (b.dataset.a === 'save') { stopInertia(); saveCam(); }
+    if (b.dataset.a === 'shot') { stopInertia(); api.invoke('display:cmd', { cmd: 'shotAdd' }); }
     if (b.dataset.a === 'lock') { stopInertia(); saveCam(); api.setConfig({ display: { mouseCamera: false } }); }
   });
 }
+// ---- tự đổi góc camera theo danh sách góc người dùng lưu (display.shots), mỗi góc giữ display.cycle.sec giây
+const camNow = () => ({ pos: camera.position.toArray().map(r4), target: controls.target.toArray().map(r4), fov: +camera.fov.toFixed(3) });
+const shots = () => (cfg.display.shots || []).filter(s => s && s.cam && s.enabled !== false);
+const cyc = { t: 0, idx: -1, cur: null, holdUntil: 0, donor: false };
+function goShot(s, sec) {
+  if (!s) return;
+  const c = cfg.display.cycle || {};
+  followOff.set(0, 0, 0);
+  tweenCam(s.cam, sec ?? (c.mode === 'cut' ? 0.001 : Math.max(0.2, c.moveSec ?? 2.5)));
+  cyc.cur = s.id; cyc.t = 0;
+  api.send('display:status', { shot: s.name || '' });
+}
+function nextShot(dir = 1) {
+  const list = shots(); if (!list.length) return;
+  const c = cfg.display.cycle || {};
+  if (c.order === 'random' && list.length > 1 && dir === 1) { let i; do i = Math.floor(Math.random() * list.length); while (list[i].id === cyc.cur); cyc.idx = i; }
+  else { const i = list.findIndex(s => s.id === cyc.cur); cyc.idx = ((i < 0 ? -1 : i) + dir + list.length) % list.length; }
+  goShot(list[cyc.idx]);
+}
+function cycleTick(dt) {
+  const c = cfg.display.cycle || {};
+  if (!c.enabled || !shots().length) { cyc.donor = false; return; }
+  if (performance.now() < cyc.holdUntil) return;            // vừa chỉnh tay -> tạm dừng
+  // đang viết tên người donate: giữ một góc (nhìn rõ chữ) cho tới khi viết xong
+  const donorShot = c.donorShot && c.donorShot !== 'none' ? (c.donorShot === 'main' ? { id: 'main', name: 'Góc chính', cam: camOf('main') } : shots().find(s => s.id === c.donorShot)) : null;
+  const writingDonor = writer.busy && writer.job && writer.job.type === 'donor';
+  if (donorShot && writingDonor) { if (!cyc.donor) { cyc.donor = true; goShot(donorShot, Math.min(1.5, c.moveSec ?? 2.5)); } return; }
+  if (cyc.donor) { cyc.donor = false; cyc.t = Math.max(0, (c.sec ?? 15) - 2); }   // viết xong: 2 giây sau đổi góc tiếp
+  cyc.t += dt;
+  if (cyc.idx < 0 || cyc.t >= Math.max(2, c.sec ?? 15)) nextShot(1);
+}
+controls.addEventListener('start', () => { cyc.holdUntil = performance.now() + 20000; tween = null; });
 function updateCamBar() { if (camBar) camBar.classList.toggle('show', controls.enabled); }
 setCamMode('rotate'); updateCamBar();
 
@@ -283,6 +321,7 @@ function frame() {
     camera.fov = tween.f0 + (tween.f1 - tween.f0) * e; camera.updateProjectionMatrix();
     if (u >= 1) tween = null;
   }
+  cycleTick(dt);
   followPen(dt);
   controls.update();
   render();
@@ -292,7 +331,7 @@ function frame() {
 if (!window.__manual) renderer.setAnimationLoop(frame);
 
 // tiện cho kiểm thử
-window.__pw = { dust, desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, story, applyCam,
+window.__pw = { dust, desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, story, applyCam, cycleTick, get tween() { return tween; },
   async sim(sec, dt = 1 / 30) {
     const sl = (ms) => new Promise(r => setTimeout(r, ms)); const n = Math.round(sec / dt);
     for (let i = 0; i < n; i++) {
