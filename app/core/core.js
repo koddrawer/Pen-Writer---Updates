@@ -41,6 +41,7 @@ module.exports = async function start(ctx) {
   function setCfg(patch, { silent } = {}) {
     cfg = deepMerge(cfg, patch); save();
     if (patch.update) ctx.updater.configure(cfg.update);
+    if (patch.voice && (patch.voice.engine === 'vieneu' || patch.voice.vieneu) && cfg.voice.engine === 'vieneu' && (cfg.voice.vieneu || {}).autoStart !== false && typeof vnStart === 'function') setTimeout(() => { try { vnStart(); } catch { } }, 300);
     if (!silent) broadcast('config', cfg);
     applyWindowCfg();
     return cfg;
@@ -216,6 +217,21 @@ module.exports = async function start(ctx) {
     fs.copyFileSync(src, dst); return dst;
   };
   const uid = (p) => p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // ---------------- VieNeu-TTS: tự cài + bật máy chủ trên PC
+  const vieneuLib = require('./vieneu.js');
+  const vnServer = new vieneuLib.VieNeuServer(path.join(userData, 'vieneu'), (s) => { toPanel('vieneu:status', s); if (s.state === 'error') addLog('err', s.message); else if (s.message) addLog('sys', s.message); }, (l) => toPanel('vieneu:log', l));
+  let vnErrT = 0;
+  const vnErr = (e) => { if (Date.now() - vnErrT > 30000) { vnErrT = Date.now(); addLog('err', 'Giọng VieNeu lỗi: ' + e.message + ' – tạm dùng giọng AI Microsoft'); } };
+  const vnLocal = () => { const vn = cfg.voice.vieneu || {}; return /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:|\/|$)/.test(vn.url || ''); };
+  function vnStart() {
+    const vn = cfg.voice.vieneu || {};
+    if (!vnLocal()) return { state: 'remote', message: 'Đang dùng máy chủ VieNeu ở ' + vn.url };
+    const port = +(String(vn.url).match(/:(\d+)/) || [])[1] || vn.port || 8000;
+    vnServer.start({ port, lan: !!vn.lan, precision: vn.precision || 'fp32', gpu: vn.device || 'auto' });
+    return vnServer.status;
+  }
+  app.on('will-quit', () => vnServer.stop());
+  if (cfg.voice.engine === 'vieneu' && (cfg.voice.vieneu || {}).autoStart !== false) setTimeout(() => vnStart(), 3000);
   const pick = async (kind, multi) => {
     const filters = { image: [{ name: 'Ảnh', extensions: ['png', 'jpg', 'jpeg', 'webp'] }], audio: [{ name: 'Âm thanh', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus'] }], font: [{ name: 'Font', extensions: ['ttf', 'otf', 'woff'] }] }[kind];
     const r = await dialog.showOpenDialog(W.panel, { properties: ['openFile', ...(multi ? ['multiSelections'] : [])], filters });
@@ -300,6 +316,33 @@ module.exports = async function start(ctx) {
         return 'media://local/' + encodeURIComponent(file);
       } catch (e) { addLog('err', 'Không tải được avatar: ' + e.message); return null; }
     },
+    'tts:vieneu': async (text, o = {}) => {
+      const vn = cfg.voice.vieneu || {};
+      try { return { file: (await tts.vieneu(text, { url: vn.url, voice: o.voice || vn.voice, clones: vn.clones || [] })) }; }
+      catch (e) { vnErr(e); return { error: e.message }; }
+    },
+    'vieneu:voices': async (url) => { try { return { voices: await vieneuLib.voices(url || (cfg.voice.vieneu || {}).url) }; } catch (e) { return { error: e.message }; } },
+    'vieneu:clonePath': async (name, file) => {
+      name = String(name || '').trim().replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 60);
+      if (!name) throw new Error('Đặt tên cho giọng trước khi nhân bản');
+      const vn = cfg.voice.vieneu || {};
+      await vieneuLib.addVoice(vn.url, name, file);            // máy chủ nhận được giọng mới ngay
+      const clones = (vn.clones || []).filter(c => c.name !== name).concat([{ name, file }]);
+      setCfg({ voice: { vieneu: { clones } } });
+      addLog('sys', `Đã nhân bản giọng "${name}"`);
+      return { name };
+    },
+    'vieneu:removeClone': (name) => setCfg({ voice: { vieneu: { clones: ((cfg.voice.vieneu || {}).clones || []).filter(c => c.name !== name) } } }),
+    'vieneu:clone': async (name) => {
+      const f = await pick('audio', false); if (!f[0]) return null;
+      fs.mkdirSync(path.join(userData, 'voices'), { recursive: true });
+      const dst = copyInto(f[0], path.join(userData, 'voices'));
+      return RPC['vieneu:clonePath'](name, dst);
+    },
+    'vieneu:install': () => { vnServer.install({ gpu: !!(cfg.voice.vieneu || {}).gpu }).then(() => vnStart()); return vnServer.status; },
+    'vieneu:start': () => vnStart(),
+    'vieneu:stop': () => vnServer.stop(),
+    'vieneu:status': () => vnServer.status,
     'tts:edge': async (text, o) => { try { return { file: await tts.edge(text, o) }; } catch (e) { addLog('err', 'Giọng Edge lỗi: ' + e.message + ' – chuyển sang Google'); return { error: e.message }; } },
     'tts:google': async (text, lang) => { try { return { file: await tts.google(text, lang) }; } catch (e) { addLog('err', 'Giọng Google lỗi: ' + e.message); return { error: e.message }; } },
     'test:pickAvatar': async () => { const f = await pick('image', false); if (f[0]) setCfg({ testAvatar: 'media://local/' + encodeURIComponent(f[0]) }); return f[0] || null; },

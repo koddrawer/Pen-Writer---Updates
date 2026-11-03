@@ -50,6 +50,8 @@
   const FONT = '.ttf,.otf,.woff,.woff2,font/*,application/octet-stream';
   const LOCAL = {
     'fonts:add': async () => { const fs = await pick(FONT, true); return fs.length ? call('fonts:addPaths', await upload('fonts', fs)) : []; },
+    'vieneu:clone': async (name) => { const fs = await pick(AUDIO, false); if (!fs.length) return null; const [u] = await upload('voices', fs); return u ? call('vieneu:clonePath', name, u.path) : null; },
+    'vieneu:install': () => ({ state: 'remote', message: 'Cài VieNeu trên PC, điện thoại dùng qua mạng LAN' }), 'vieneu:start': () => null, 'vieneu:stop': () => null,
     'story:add': async () => { const fs = await pick(AUDIO, true); return fs.length ? call('story:addPaths', await upload('story', fs)) : []; },
     'music:add': async () => { const fs = await pick(AUDIO, true); return fs.length ? call('music:addPaths', await upload('music', fs)) : []; },
     'tier:addVoice': async (id) => { const fs = await pick(AUDIO, true); return fs.length ? call('tier:addVoicePaths', id, await upload('voice', fs)) : []; },

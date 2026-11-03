@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { edgeSynth, VOICES } = require('./edge-tts.js');
+const vieneu = require('./vieneu.js');
 
 class TTS {
   constructor(dir, fetch, getWS) { this.dir = dir; this.fetch = fetch; this.getWS = getWS; fs.mkdirSync(dir, { recursive: true }); this.clean(); }
@@ -24,6 +25,18 @@ class TTS {
     if (!r.ok) throw new Error('Google TTS HTTP ' + r.status);
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length < 500) throw new Error('Google TTS trả về dữ liệu rỗng');
+    fs.writeFileSync(file, buf);
+    return file;
+  }
+  // VieNeu-TTS (máy chủ trên PC): đệm wav theo câu + giọng
+  async vieneu(text, o = {}) {
+    text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+    if (!text) throw new Error('Câu đọc trống');
+    const voice = o.voice || '';
+    const key = crypto.createHash('sha1').update(['vieneu', voice, (o.clones || []).find(c => c.name === voice)?.file || '', text].join('|')).digest('hex').slice(0, 20);
+    const file = path.join(this.dir, key + '.wav');
+    if (fs.existsSync(file) && fs.statSync(file).size > 2000) return file;
+    const buf = await vieneu.synth(o.url, text, voice, o.clones || []);
     fs.writeFileSync(file, buf);
     return file;
   }

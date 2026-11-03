@@ -350,6 +350,20 @@ function renderSound() {
       btn('▶', () => api.invoke('story:cmd', 'track', f), 'sm'), btn('↑', () => api.invoke('story:move', f, -1), 'sm'), btn('↓', () => api.invoke('story:move', f, 1), 'sm'),
       btn('×', () => api.invoke('story:remove', f), 'sm red'))) : [h('div', { class: 'hint' }, 'Chưa có truyện nào – bấm "+ Thêm truyện"')]));
   };
+  live.vnstat = h('div', { class: 'hint' }, '—'); live.vnlog = h('div', { class: 'hint', style: 'font-size:11px;opacity:.8' });
+  const cname = h('input', { type: 'text', placeholder: 'Tên giọng mới' });
+  const vnClones = h('div', { class: 'list' });
+  const vnOpts = () => { const vn = cfg.voice.vieneu || {}; const names = new Set([...(live.vnVoices || ['Mai Anh', 'Adam', 'Minh Đức', 'Trúc Ly', 'Quỳnh Anh', 'Phạm Tuyên', 'Quang Sơn', 'Ngọc Trân', 'Xuân Vĩnh', 'Thái Sơn', 'Thùy Dung', 'Mỹ Duyên']), ...(vn.clones || []).map(c => c.name)]);
+    if (vn.voice) names.add(vn.voice); return [...names].map(n => [n, ((vn.clones || []).some(c => c.name === n) ? '🎙 ' : '') + n]); };
+  const drawClones = () => vnClones.replaceChildren(...(((cfg.voice.vieneu || {}).clones || []).map(c => h('div', { class: 'item' }, h('span', { class: 'grow' }, '🎙 ' + c.name),
+    btn('×', () => api.invoke('vieneu:removeClone', c.name), 'sm red')))));
+  async function loadVn() {
+    const r = await api.invoke('vieneu:voices');
+    if (r && r.voices) { live.vnVoices = r.voices; live.vnstat.textContent = `Đã kết nối VieNeu – ${r.voices.length} giọng`; binds.forEach(f => f()); }
+    else live.vnstat.textContent = 'Chưa kết nối được VieNeu: ' + ((r && r.error) || '');
+  }
+  api.invoke('vieneu:status').then(renderVn).catch(() => { });
+  if (cfg.voice.engine === 'vieneu') setTimeout(loadVn, 500);
   const vname = h('input', { type: 'text', value: 'Minh Anh' });
   const gname = h('input', { type: 'text', value: 'Lan Hương' });
   const voiceOpts = () => [['', '— tự chọn theo ngôn ngữ —'], ...(live.voices || []).map(v => [v.name, `${v.name} (${v.lang})`])];
@@ -385,7 +399,7 @@ function renderSound() {
       field('voice.mode', 'Kiểu', 'select', { options: [['tts', 'Đọc câu cảm ơn (có tên)'], ['files', 'Phát file ghi âm của mức'], ['both', 'File ghi âm rồi đọc tên']] }),
       field('voice.when', 'Phát lúc', 'select', { options: [['start', 'Bắt đầu viết'], ['end', 'Viết xong']] }),
       field('voice.text', 'Câu cảm ơn chung', 'text', { ph: 'Cảm ơn {name} đã tặng {gift}' }),
-      field('voice.engine', 'Bộ giọng đọc', 'select', { options: [['edge', 'Giọng AI Microsoft (tự nhiên nhất, cần mạng)'], ['google', 'Google (cần mạng)'], ['system', api.platform === 'android' ? 'Giọng của máy (offline)' : 'Giọng Windows (offline)']] }),
+      field('voice.engine', 'Bộ giọng đọc', 'select', { options: [['vieneu', 'VieNeu-TTS (tiếng Việt, nhân bản giọng – xem mục bên dưới)'], ['edge', 'Giọng AI Microsoft (tự nhiên nhất, cần mạng)'], ['google', 'Google (cần mạng)'], ['system', api.platform === 'android' ? 'Giọng của máy (offline)' : 'Giọng Windows (offline)']] }),
       field('voice.edgeVoice', 'Giọng AI', 'select', { options: EDGE_VOICES }),
       field('voice.pitch', 'Cao độ giọng AI', 'range', { min: -30, max: 30, step: 1, unit: 'Hz' }),
       field('voice.lang', 'Ngôn ngữ', 'select', { options: [['vi', 'Tiếng Việt'], ['en', 'English'], ['zh-CN', '中文'], ['th', 'ไทย'], ['id', 'Indonesia']] }),
@@ -395,6 +409,23 @@ function renderSound() {
       field('voice.minDiamonds', 'Chỉ đọc khi tặng từ', 'number', { min: 0, unit: 'xu' }),
       row('Tên thử', h('div', { class: 'ctl' }, vname, btn('Nghe thử', () => api.invoke('voice:test', { name: vname.value }), 'sm pri'))),
       note('Giọng AI Microsoft: Hoài My/Nam Minh đọc tiếng Việt tự nhiên; các giọng "nhiều thứ tiếng" đọc được cả tên nước ngoài. Lỗi/mất mạng sẽ tự chuyển sang Google rồi giọng máy. "Ngôn ngữ" chỉ dùng cho Google/giọng máy. File ghi âm riêng cho từng mức thêm ở tab "Mức donate".')),
+    card('Giọng VieNeu-TTS', live.vnstat, live.vnlog,
+      api.platform === 'android' ? note('Điện thoại không chạy được VieNeu – hãy bật VieNeu trên PC (tick "Cho máy khác trong mạng LAN dùng"), rồi nhập địa chỉ PC vào ô bên dưới, ví dụ http://192.168.1.10:8000.')
+        : h('div', { class: 'btns' }, btn('Cài VieNeu (1 lần)', () => api.invoke('vieneu:install'), 'pri'), btn('▶ Bật', () => api.invoke('vieneu:start')), btn('⏹ Tắt', () => api.invoke('vieneu:stop'))),
+      field('voice.vieneu.url', 'Địa chỉ máy chủ', 'text', { ph: 'http://127.0.0.1:8000' }),
+      api.platform === 'android' ? null : field('voice.vieneu.autoStart', 'Tự bật khi mở app', 'bool'),
+      api.platform === 'android' ? null : field('voice.vieneu.lan', 'Cho máy khác trong mạng LAN dùng (điện thoại)', 'bool', { tip: 'Bật lại máy chủ để áp dụng' }),
+      api.platform === 'android' ? null : field('voice.vieneu.device', 'Chạy bằng', 'select', { options: [['auto', 'Tự chọn (GPU NVIDIA nếu đã cài)'], ['cpu', 'CPU']] }),
+      api.platform === 'android' ? null : field('voice.vieneu.precision', 'Chế độ CPU', 'select', { options: [['fp32', 'Chất lượng cao nhất'], ['int8', 'Nhanh gấp ~3 lần (CPU đời mới)']] }),
+      api.platform === 'android' ? null : field('voice.vieneu.gpu', 'Cài thêm bản GPU NVIDIA (~3 GB) khi bấm Cài', 'bool'),
+      h('div', { class: 'btns' }, btn('Tải danh sách giọng', loadVn, 'sm')),
+      field('voice.vieneu.voice', 'Giọng cảm ơn quà', 'select', { options: vnOpts }),
+      field('voice.vieneu.greetVoice', 'Giọng chào người vào', 'select', { options: () => [['', '— giống giọng cảm ơn —'], ...vnOpts()] }),
+      row('Nhân bản giọng', h('div', { class: 'ctl' }, cname, btn('+ Chọn file 3–8 giây', async () => {
+        try { const r = await api.invoke('vieneu:clone', cname.value); if (r && r.name) { toast(`Đã nhân bản giọng "${r.name}"`); loadVn(); } } catch (e) { toast('Nhân bản lỗi: ' + (e.message || e)); }
+      }, 'sm pri'))),
+      vnClones,
+      note('VieNeu-TTS (mã nguồn mở) đọc tiếng Việt rất tự nhiên và nhân bản được giọng bất kỳ từ 3–8 giây ghi âm sạch. "Cài VieNeu" tự tải Python + model về máy (lần đầu vài phút, cần ~2 GB trống); sau đó app tự bật khi mở. Chọn "Bộ giọng đọc: VieNeu-TTS" ở mục Voice cảm ơn. VieNeu lỗi/chưa bật thì tự dùng giọng AI Microsoft.')),
     card('Lời chào người vào live',
       field('voice.greet.enabled', 'Chào người mới vào phòng', 'bool'),
       field('voice.greet.texts', 'Câu chào', 'text', { ph: 'Chào mừng {name} đã đến với phiên live | Xin chào {name}' }),
@@ -405,6 +436,12 @@ function renderSound() {
       note('Nhiều câu chào cách nhau bằng dấu | – mỗi lần chọn ngẫu nhiên một câu, {name} là tên người vào. Dùng chung giọng đọc, tốc độ, âm lượng với voice cảm ơn (cần bật "Bật voice cảm ơn"). Lời cảm ơn donate luôn được đọc trước; phòng đông thì chỉ chào những người mới vào gần nhất.'))));
   draw(); binds.push(draw);
   sdraw(); binds.push(sdraw);
+  drawClones(); binds.push(drawClones);
+}
+function renderVn(s) {
+  if (!live.vnstat || !s) return;
+  const icon = { ready: '🟢', starting: '🟡', installing: '🟡', stopped: '⚪', notInstalled: '⚪', error: '🔴', remote: '🌐' }[s.state] || '';
+  live.vnstat.textContent = `${icon} ${s.message || s.state}`;
 }
 function renderSStat(s) {
   if (!live.sstat || !s) return;
@@ -545,6 +582,8 @@ api.on('log', addLog);
 api.on('queue', renderQueue);
 api.on('music:status', renderMStat);
 api.on('story:status', renderSStat);
+api.on('vieneu:status', renderVn);
+api.on('vieneu:log', (l) => { if (live.vnlog) live.vnlog.textContent = l; });
 api.on('update:status', renderUpd);
 function renderTik(s) {
   const p = $('#pTik'); p.textContent = 'TikTok: ' + ({ connected: 'đã kết nối', connecting: 'đang kết nối', error: 'lỗi', disconnected: 'chưa kết nối' }[s.state] || s.state) + (s.viewers ? ` · ${s.viewers} người xem` : '');

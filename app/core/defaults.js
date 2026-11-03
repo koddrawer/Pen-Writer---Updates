@@ -163,8 +163,10 @@ module.exports = {
     enabled: true,
     mode: 'tts',            // tts = đọc câu cảm ơn | files = phát file ghi âm của mức | both = file rồi đọc tên
     when: 'start',          // start = lúc bắt đầu viết | end = viết xong
-    engine: 'edge',         // edge (giọng neural Microsoft, tự nhiên nhất, cần mạng) | google (cần mạng) | system (giọng máy)
+    engine: 'edge',         // vieneu (VieNeu-TTS, tiếng Việt tự nhiên, nhân bản giọng) | edge (giọng neural Microsoft, tự nhiên nhất, cần mạng) | google (cần mạng) | system (giọng máy)
     edgeVoice: 'vi-VN-HoaiMyNeural', pitch: 0,
+    // VieNeu-TTS: chạy trên PC (app tự cài/bật), điện thoại dùng qua mạng LAN; giọng nhân bản lưu trong clones
+    vieneu: { url: 'http://127.0.0.1:8000', voice: 'Mai Anh', greetVoice: '', clones: [], autoStart: true, port: 8000, lan: false, precision: 'fp32', device: 'auto', gpu: false },
     lang: 'vi', systemVoice: '', rate: 1, volume: 1,
     text: 'Cảm ơn {name} đã tặng {gift}',
     minDiamonds: 1,

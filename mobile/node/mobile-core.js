@@ -55,6 +55,9 @@ module.exports = async function start(ctx) {
     like: (u) => queue.addName(u, 'like'),
     gift: (g) => queue.addDonor(g),
   });
+  const vieneuLib = require('./vieneu.js');
+  let vnErrT = 0;
+  const vnErr = (e) => { if (Date.now() - vnErrT > 30000) { vnErrT = Date.now(); addLog('err', 'Giọng VieNeu lỗi: ' + e.message + ' – tạm dùng giọng AI Microsoft'); } };
   const tts = new TTS(path.join(dataDir, 'tts'), (u, o) => fetch(u, o), () => { try { return req('ws'); } catch { return null; } });
   const updater = new MobileUpdater({ dataDir, running: { version: ctx.appVersion, dir: ctx.coreDir }, shellVersion: ctx.shellVersion, req });
   updater.configure(cfg.update);
@@ -118,6 +121,24 @@ module.exports = async function start(ctx) {
         return mediaUrl(file);
       } catch (e) { addLog('err', 'Không tải được avatar: ' + e.message); return null; }
     },
+    'tts:vieneu': async (text, o = {}) => {
+      const vn = cfg.voice.vieneu || {};
+      try { return { file: mediaUrl(await tts.vieneu(text, { url: vn.url, voice: o.voice || vn.voice, clones: vn.clones || [] })) }; }
+      catch (e) { vnErr(e); return { error: e.message }; }
+    },
+    'vieneu:voices': async (url) => { try { return { voices: await vieneuLib.voices(url || (cfg.voice.vieneu || {}).url) }; } catch (e) { return { error: e.message }; } },
+    'vieneu:clonePath': async (name, file) => {
+      name = String(name || '').trim().replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 60);
+      if (!name) throw new Error('Đặt tên cho giọng trước khi nhân bản');
+      const vn = cfg.voice.vieneu || {};
+      await vieneuLib.addVoice(vn.url, name, file);            // máy chủ nhận được giọng mới ngay
+      const clones = (vn.clones || []).filter(c => c.name !== name).concat([{ name, file }]);
+      setCfg({ voice: { vieneu: { clones } } });
+      addLog('sys', `Đã nhân bản giọng "${name}"`);
+      return { name };
+    },
+    'vieneu:removeClone': (name) => setCfg({ voice: { vieneu: { clones: ((cfg.voice.vieneu || {}).clones || []).filter(c => c.name !== name) } } }),
+    'vieneu:status': () => ({ state: 'remote', message: 'Điện thoại dùng máy chủ VieNeu chạy trên PC (bật "Cho máy khác trong mạng LAN dùng" trên PC, nhập địa chỉ http://<IP máy PC>:8000).' }),
     'tts:edge': async (text, o) => { try { return { file: mediaUrl(await tts.edge(text, o)) }; } catch (e) { addLog('err', 'Giọng Edge lỗi: ' + e.message + ' – chuyển sang Google'); return { error: e.message }; } },
     'tts:google': async (text, lang) => { try { return { file: mediaUrl(await tts.google(text, lang)) }; } catch (e) { addLog('err', 'Giọng Google lỗi: ' + e.message); return { error: e.message }; } },
     'files:exists': (files) => (files || []).map(f => fs.existsSync(f)),

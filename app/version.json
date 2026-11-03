@@ -1,7 +1,7 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "minShell": "1.0.0",
-  "notes": "Tự đổi góc camera: lưu nhiều góc, tự chuyển theo thời gian đặt (lia mượt hoặc cắt cảnh, theo thứ tự hoặc ngẫu nhiên), giữ góc chính khi đang viết tên donate",
-  "date": "2026-11-02",
+  "notes": "Giọng VieNeu-TTS: app tự cài và bật trên PC, chọn giọng riêng cho lời chào và lời cảm ơn quà, nhân bản giọng từ file 3–8 giây; điện thoại dùng VieNeu của PC qua mạng LAN",
+  "date": "2026-11-03",
   "minAndroid": "1.0.0"
 }

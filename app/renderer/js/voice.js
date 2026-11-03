@@ -55,7 +55,7 @@ export class Voice {
       const files = (tier && tier.voiceFiles) || [];
       const mode = v.mode || 'tts';
       if ((mode === 'files' || mode === 'both') && files.length) await this.playFile(files[Math.floor(Math.random() * files.length)]);
-      if (mode === 'tts' || mode === 'both' || (mode === 'files' && !files.length)) await this.speak(this.text(job, tier));
+      if (mode === 'tts' || mode === 'both' || (mode === 'files' && !files.length)) await this.speak(this.text(job, tier), 'thanks');
     } catch (e) { console.warn('voice lỗi', e); }
     this.music && this.music.duck(null); this.story && this.story.holdFor(false);
     this.busy = false;
@@ -70,7 +70,7 @@ export class Voice {
     if (Date.now() - it.t > 20000) return this.pump();   // chờ quá lâu thì bỏ (người đó vào từ lâu rồi)
     this.busy = true;
     this.music && this.music.duck('voice'); this.story && this.story.holdFor(true);
-    try { await this.speak(this.greetText(it.name)); } catch (e) { console.warn('voice chào lỗi', e); }
+    try { await this.speak(this.greetText(it.name), 'greet'); } catch (e) { console.warn('voice chào lỗi', e); }
     this.music && this.music.duck(null); this.story && this.story.holdFor(false);
     this.lastGreet = Date.now(); this.busy = false;
     setTimeout(() => this.pump(), 150);
@@ -86,10 +86,17 @@ export class Voice {
       a.play().catch(end);
     });
   }
-  async speak(text) {
+  async speak(text, kind = 'thanks') {
     const v = this.cfg().voice || {};
     if (!text) return;
-    const eng = v.engine || 'edge';
+    let eng = v.engine || 'edge';
+    if (eng === 'vieneu') {
+      const vn = v.vieneu || {};
+      const voice = (kind === 'greet' && vn.greetVoice) || vn.voice || '';
+      const r = await this.api.invoke('tts:vieneu', text, { voice });
+      if (r && r.file) { this.a.playbackRate = Math.max(0.5, Math.min(2, v.rate || 1)); await this.playFile(r.file); return; }
+      eng = 'edge';    // VieNeu chưa sẵn sàng -> giọng AI Microsoft
+    }
     if (eng === 'edge') {
       const r = await this.api.invoke('tts:edge', text, { voice: v.edgeVoice || 'vi-VN-HoaiMyNeural', rate: v.rate || 1, pitch: v.pitch || 0 });
       if (r && r.file) { this.a.playbackRate = 1; await this.playFile(r.file); return; }
