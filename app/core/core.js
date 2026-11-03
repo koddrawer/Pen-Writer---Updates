@@ -180,17 +180,17 @@ module.exports = async function start(ctx) {
   }
 
   // ---------------- hàng đợi + TikTok
-  const queue = new JobQueue(getCfg, () => { toDisplay('job:available', {}); toPanel('queue', queue.snapshot()); },
+  const queue = new JobQueue(getCfg, () => { toDisplay('job:available', {}); const s = queue.snapshot(); toPanel('queue', s); toDisplay('queue', s); },
     () => toDisplay('display:cmd', { cmd: 'hurry' }));
   const tiktok = new TikTok(ctx.require, getCfg, {
     status: (s) => toPanel('tiktok:status', s),
     log: addLog,
-    join: (u) => { queue.addName(u, 'join'); toDisplay('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); },
-    chat: (u) => queue.addName(u, 'chat'),
+    join: (u) => { queue.addName(u, 'join'); toDisplay('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); toDisplay('chat:msg', { type: 'join', name: u.nickname || u.uniqueId, id: u.uniqueId, avatar: u.avatar || '' }); },
+    chat: (u, t) => { queue.addName(u, 'chat'); toDisplay('chat:msg', { type: 'chat', name: u.nickname || u.uniqueId, id: u.uniqueId, avatar: u.avatar || '', text: t }); },
     follow: (u) => queue.addName(u, 'follow'),
     share: (u) => queue.addName(u, 'share'),
     like: (u, n) => queue.addLikes(u, n),
-    gift: (g) => queue.addDonor(g),
+    gift: (g) => { queue.addDonor(g); toDisplay('chat:msg', { type: 'gift', name: g.user.nickname || g.user.uniqueId, id: g.user.uniqueId, avatar: g.user.avatar || '', gift: g.gift, count: g.count }); },
   });
   const tts = new TTS(path.join(userData, 'tts'), (u, o) => net.fetch(u, o), () => { try { return ctx.require('ws'); } catch { return null; } });
 
@@ -246,6 +246,7 @@ module.exports = async function start(ctx) {
     'queue:remove': (id) => queue.remove(id),
     'queue:clear': (which) => queue.clear(which),
     'queue:pause': (v) => queue.setPaused(v),
+    'test:chat': (text) => { const n = ['An', 'Bình', 'Chi', 'Dũng', 'Hà', 'Khoa'][Math.floor(Math.random() * 6)]; toDisplay('chat:msg', { type: 'chat', name: n + ' ' + Math.floor(Math.random() * 99), id: 'test_' + Math.random().toString(36).slice(2, 7), avatar: cfg.testAvatar || '', text: text || 'Xin chào mọi người!' }); },
     'test:gift': (o = {}) => {
       const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
       addLog('gift', `[TEST] ${g.user.nickname} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`); queue.addDonor(g, true);

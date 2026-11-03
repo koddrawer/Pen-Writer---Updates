@@ -12,6 +12,7 @@ import { Writer } from './writer.js';
 import { loadChain } from './text.js';
 import { Music } from './music.js';
 import { Story } from './story.js';
+import { Overlays } from './overlays.js';
 import { Voice } from './voice.js';
 import { Dust } from './dust.js';
 
@@ -144,6 +145,7 @@ const S = cfg.sheet || {};
 desk.makeSheets({ pxPerM: S.pxPerM || 4200, ink: cfg.writer.inkColor, tint: S.tint, grain: S.grain ?? 1 });
 const music = new Music($('mus1'), $('mus2'), api, getCfg);
 const story = new Story(api, getCfg);
+const overlays = new Overlays(api, getCfg, $('stage'));
 music.story = story;
 const voice = new Voice(api, getCfg, music);
 voice.story = story;
@@ -174,7 +176,7 @@ api.on('job:available', () => pull());
 
 api.on('config', (c) => {
   const old = cfg; cfg = c;
-  applyDisplayCfg(); music.sync(); story.sync();
+  applyDisplayCfg(); music.sync(); story.sync(); overlays.apply();
   const os = old.sheet || {}, ns = c.sheet || {};
   desk.setSheetOpts({ tint: ns.tint !== os.tint ? ns.tint : null, grain: ns.grain !== os.grain ? ns.grain ?? 1 : null, ink: c.writer.inkColor });
   fonts.cache.clear();
@@ -331,7 +333,7 @@ function frame() {
 if (!window.__manual) renderer.setAnimationLoop(frame);
 
 // tiện cho kiểm thử
-window.__pw = { dust, desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, story, applyCam, cycleTick, get tween() { return tween; },
+window.__pw = { dust, desk, writer, camera, controls, scene, renderer, sun, hemi, lamp, voice, music, story, overlays, applyCam, cycleTick, get tween() { return tween; },
   async sim(sec, dt = 1 / 30) {
     const sl = (ms) => new Promise(r => setTimeout(r, ms)); const n = Math.round(sec / dt);
     for (let i = 0; i < n; i++) {

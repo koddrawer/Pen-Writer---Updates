@@ -48,12 +48,12 @@ module.exports = async function start(ctx) {
   const queue = new JobQueue(getCfg, () => { emit('job:available', {}); emit('queue', queue.snapshot()); });
   const tiktok = new TikTok(req, getCfg, {
     status: (s) => emit('tiktok:status', s), log: addLog,
-    join: (u) => { queue.activity(); queue.addName(u, 'join'); emit('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); },
-    chat: (u) => { queue.activity(); queue.addName(u, 'chat'); },
+    join: (u) => { queue.activity(); queue.addName(u, 'join'); emit('voice:greet', { name: u.nickname || u.uniqueId, id: u.uniqueId }); emit('chat:msg', { type: 'join', name: u.nickname || u.uniqueId, id: u.uniqueId, avatar: u.avatar || '' }); },
+    chat: (u, t) => { queue.activity(); queue.addName(u, 'chat'); emit('chat:msg', { type: 'chat', name: u.nickname || u.uniqueId, id: u.uniqueId, avatar: u.avatar || '', text: t }); },
     follow: (u) => { queue.activity(); queue.addName(u, 'follow'); },
     share: (u) => { queue.activity(); queue.addName(u, 'share'); },
     like: (u) => queue.addName(u, 'like'),
-    gift: (g) => queue.addDonor(g),
+    gift: (g) => { queue.addDonor(g); emit('chat:msg', { type: 'gift', name: g.user.nickname || g.user.uniqueId, id: g.user.uniqueId, avatar: g.user.avatar || '', gift: g.gift, count: g.count }); },
   });
   const vieneuLib = require('./vieneu.js');
   let vnErrT = 0;
@@ -77,6 +77,7 @@ module.exports = async function start(ctx) {
     'queue:remove': (id) => queue.remove(id),
     'queue:clear': (w) => queue.clear(w),
     'queue:pause': (v) => queue.setPaused(v),
+    'test:chat': (text) => { const n = ['An', 'Bình', 'Chi', 'Dũng', 'Hà', 'Khoa'][Math.floor(Math.random() * 6)]; emit('chat:msg', { type: 'chat', name: n + ' ' + Math.floor(Math.random() * 99), id: 'test_' + Math.random().toString(36).slice(2, 7), avatar: cfg.testAvatar || '', text: text || 'Xin chào mọi người!' }); },
     'test:gift': (o = {}) => {
       const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
       addLog('gift', `[TEST] ${g.user.nickname} tặng ${g.gift} x${g.count} (${g.diamonds * g.count} xu)`); queue.addDonor(g, true);

@@ -1,7 +1,7 @@
 {
-  "version": "1.12.0",
+  "version": "1.13.0",
   "minShell": "1.0.0",
-  "notes": "Giọng VieNeu-TTS: app tự cài và bật trên PC, chọn giọng riêng cho lời chào và lời cảm ơn quà, nhân bản giọng từ file 3–8 giây; điện thoại dùng VieNeu của PC qua mạng LAN",
+  "notes": "Popup Danh sách chờ và Kênh chat trên màn hiển thị: có avatar, nền mờ, kéo thả đổi vị trí và kích thước, khoá khi live",
   "date": "2026-11-03",
   "minAndroid": "1.0.0"
 }

@@ -195,6 +195,12 @@ module.exports = {
     shadows: true, bloom: 0.35, exposure: 1.0, sun: 1, ambient: 1, lamp: true, vignette: 0.45,
     shots: [],              // các góc camera để tự đổi: [{ id, name, cam:{pos,target,fov}, enabled }]
     cycle: { enabled: false, sec: 15, moveSec: 2.5, mode: 'smooth', order: 'list', donorShot: 'main' },
+    // popup trên màn hiển thị (toạ độ/kích thước theo tỉ lệ khung 0..1)
+    overlays: {
+      locked: true,
+      queue: { enabled: true, x: 0.04, y: 0.04, w: 0.44, h: 0.26, bg: 0.45, blur: 8, font: 1, rows: 6, showViewers: true },
+      chat: { enabled: true, x: 0.04, y: 0.64, w: 0.62, h: 0.3, bg: 0.4, blur: 8, font: 1, rows: 30, gifts: true, joins: false },
+    },
     gpuBoost: true,         // chạy kèm --ignore-gpu-blocklist --enable-gpu-rasterization (dùng GPU thay CPU)
     mouseCamera: true, followPen: 0, cameras: {}, dragWindow: false,
     penPark: { u: 0.1, v: 0.9, h: 0.04 },
