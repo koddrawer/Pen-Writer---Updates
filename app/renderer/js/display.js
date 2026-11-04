@@ -19,8 +19,15 @@ import { Dust } from './dust.js';
 const api = window.api;
 const $ = (id) => document.getElementById(id);
 const errBox = $('err');
-window.addEventListener('error', e => { errBox.textContent = String(e.message || e); });
-window.addEventListener('unhandledrejection', e => { errBox.textContent = String(e.reason && e.reason.stack || e.reason); });
+// lỗi chỉ hiện thoáng 6 giây trên màn hình (không dính lên live), nội dung đầy đủ ghi vào nhật ký của bảng điều khiển
+let errT = 0;
+const showErr = (msg) => {
+  const t = String(msg || ''); if (!t) return;
+  errBox.textContent = t.split('\n')[0].slice(0, 200); clearTimeout(errT); errT = setTimeout(() => { errBox.textContent = ''; }, 6000);
+  try { api.send('display:log', { kind: 'err', text: 'Màn hiển thị: ' + t.slice(0, 400) }); } catch { }
+};
+window.addEventListener('error', e => showErr(e.message || e));
+window.addEventListener('unhandledrejection', e => showErr(e.reason && (e.reason.message || e.reason.stack) || e.reason));
 
 let cfg = await api.getConfig();
 const getCfg = () => cfg;

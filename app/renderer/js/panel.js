@@ -490,7 +490,7 @@ function renderDisplay() {
   };
   drawShots(); binds.push(() => { if (!shotList.contains(document.activeElement)) drawShots(); });
   $('#tab-display').replaceChildren(h('div', { class: 'grid' },
-    card('Cửa sổ hiển thị 9:16',
+    api.platform === 'android' ? null : card('Cửa sổ hiển thị 9:16',
       note('Khung hình xuất ra LIVE phải đúng độ phân giải của LIVE Studio (thường 1080×1920). Cửa sổ nhỏ hơn thì LIVE Studio phải phóng to lên → bị mờ.'),
       h('div', { class: 'btns' }, ...[[540, 960], [720, 1280], [1080, 1920]].map(([w, hh]) => btn(`${w}×${hh}`, async () => {
         const r = await api.invoke('win:displaySize', w, hh);

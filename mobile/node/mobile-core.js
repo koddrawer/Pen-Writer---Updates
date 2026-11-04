@@ -152,7 +152,7 @@ module.exports = async function start(ctx) {
     'config:exportText': () => JSON.stringify(cfg, null, 1),
     'config:importText': (text) => { const c = JSON.parse(text); cfg = migrateConfig(DEFAULTS, c); cfg.platform = 'android'; save(); emit('config', cfg); return true; },
     // không dùng trên điện thoại
-    'win:show': () => { }, 'win:displaySize': () => null, 'win:setRotate': () => { }, 'open:userData': () => { },
+    'win:show': () => { }, 'win:fullscreen': () => true, 'win:recreateDisplay': () => { }, 'win:displaySize': () => null, 'win:setRotate': () => { }, 'open:userData': () => { },
   };
 
   // ---- kênh với WebView
