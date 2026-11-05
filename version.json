@@ -1,7 +1,7 @@
 {
-  "version": "1.13.6",
+  "version": "1.13.7",
   "minShell": "1.0.0",
-  "notes": "Android: sửa lỗi 'crypto is not defined' khi kết nối TikTok",
+  "notes": "Android: nhạc nền, voice và truyện phát bằng trình phát của Android để TikTok live chia sẻ màn hình thu được tiếng (cần APK 1.0.5)",
   "date": "2026-11-05",
   "minAndroid": "1.0.0"
 }

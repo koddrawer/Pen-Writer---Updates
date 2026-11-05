@@ -1,6 +1,6 @@
 {
   "name": "pen-writer-mobile",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "Pen Writer cho Android (Capacitor + Node.js tr\u00ean \u0111i\u1ec7n tho\u1ea1i)",
   "scripts": {

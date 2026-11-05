@@ -7,7 +7,7 @@ const writePos = (o) => { try { localStorage.setItem(POS_KEY, JSON.stringify(o))
 export class Story {
   constructor(api, getCfg) {
     Object.assign(this, { api, cfg: getCfg });
-    this.a = new Audio(); this.a.preload = 'auto';
+    this.a = window.__createAudio ? window.__createAudio() : new Audio(); this.a.preload = 'auto';
     this.file = null; this.userPaused = false; this.hold = 0; this.vol = 0; this.gapT = null; this.err = 0;
     this.pos = readPos();          // { file: giây đã nghe }, { __last: file đang nghe dở }
     this.a.addEventListener('ended', () => { delete this.pos[this.file]; this.savePos(); this.afterEnd(); });

@@ -29,6 +29,7 @@ public class MainActivity extends BridgeActivity {
             note("crash-java.txt", "Thread " + t.getName() + ": " + sw);
             if (prev != null) prev.uncaughtException(t, e);
         });
+        registerPlugin(NativeAudioPlugin.class);   // âm thanh phát bằng MediaPlayer để TikTok thu được
         super.onCreate(savedInstanceState);
         // WebView (màn hiển thị) bị hệ thống tắt vì thiếu RAM/GPU: mặc định Capacitor để app văng ra.
         // Ở đây ghi lại rồi tự mở lại app sau 1 giây.

@@ -150,7 +150,9 @@ const fonts = {
 // ---------- giấy + bút
 const S = cfg.sheet || {};
 desk.makeSheets({ pxPerM: S.pxPerM || 4200, ink: cfg.writer.inkColor, tint: S.tint, grain: S.grain ?? 1 });
-const music = new Music($('mus1'), $('mus2'), api, getCfg);
+// Android: âm thanh phát bằng MediaPlayer (window.__createAudio) để TikTok live thu được
+const mkAudio = (el) => window.__createAudio ? window.__createAudio() : el;
+const music = new Music(mkAudio($('mus1')), mkAudio($('mus2')), api, getCfg);
 const story = new Story(api, getCfg);
 const overlays = new Overlays(api, getCfg, $('stage'));
 music.story = story;

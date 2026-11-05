@@ -2,7 +2,7 @@
 export class Voice {
   constructor(api, getCfg, music) {
     this.api = api; this.cfg = getCfg; this.music = music;
-    this.a = new Audio(); this.a.preload = 'auto';
+    this.a = window.__createAudio ? window.__createAudio() : new Audio(); this.a.preload = 'auto';
     this.q = []; this.busy = false;
     this.gq = []; this.greeted = new Map(); this.lastGreet = 0;
     const sendVoices = () => {
