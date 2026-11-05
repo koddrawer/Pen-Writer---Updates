@@ -47,7 +47,25 @@ module.exports = async function start(ctx) {
 
   // ---- nhật ký
   const log = [];
-  const addLog = (kind, text) => { const e = { t: Date.now(), kind, text }; log.push(e); if (log.length > 300) log.shift(); emit('log', e); };
+  // nhật ký ghi cả ra file (giữ lại khi app văng) -> lần mở sau xem được chuyện gì xảy ra ngay trước đó
+  const sessFile = path.join(dataDir, 'session.log'), prevFile = path.join(dataDir, 'session-prev.log');
+  try { if (fs.existsSync(sessFile)) fs.renameSync(sessFile, prevFile); } catch { }
+  const stamp = (t) => new Date(t).toISOString().slice(11, 19);
+  const addLog = (kind, text) => {
+    const e = { t: Date.now(), kind, text }; log.push(e); if (log.length > 300) log.shift(); emit('log', e);
+    try { fs.appendFileSync(sessFile, `${stamp(e.t)} ${kind} ${String(text).replace(/\n/g, ' ')}\n`); } catch { }
+  };
+  // đọc dấu vết lần trước: lỗi Java / WebView bị tắt / dòng nhật ký cuối
+  setTimeout(() => {
+    for (const [f, label] of [['crash-java.txt', 'App văng lần trước (lỗi Java)'], ['crash-webview.txt', 'Màn hiển thị bị tắt lần trước']]) {
+      const p = path.join(dataDir, f);
+      try { if (fs.existsSync(p)) { const t = fs.readFileSync(p, 'utf8').trim().split('\n').slice(-3).join(' | '); addLog('err', `${label}: ${t.slice(0, 600)}`); fs.unlinkSync(p); } } catch { }
+    }
+    try {
+      const prev = fs.readFileSync(prevFile, 'utf8').trim().split('\n');
+      if (prev.length && !/Thoát bình thường/.test(prev[prev.length - 1])) addLog('sys', 'Lần chạy trước kết thúc đột ngột – các dòng cuối: ' + prev.slice(-6).join(' ‖ ').slice(0, 800));
+    } catch { }
+  }, 1500);
   try { applyNet(); } catch (e) { addLog('err', 'Proxy lỗi: ' + e.message); }
   const onErr = (e) => { try { addLog('err', 'Lỗi: ' + (e && e.message || e)); } catch { } };
   process.on('uncaughtException', onErr); process.on('unhandledRejection', onErr);

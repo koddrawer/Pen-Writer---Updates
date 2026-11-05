@@ -1,7 +1,7 @@
 {
-  "version": "1.13.3",
+  "version": "1.13.4",
   "minShell": "1.0.0",
-  "notes": "Android: ô Proxy áp cho mọi kết nối của app (cập nhật, TikTok, giọng đọc, avatar); APK 1.0.3 mới",
+  "notes": "Android: app tự mở lại khi màn hiển thị bị hệ thống tắt, ghi lại nguyên nhân app văng và hiện trong nhật ký ở lần mở sau; APK 1.0.4",
   "date": "2026-11-05",
   "minAndroid": "1.0.0"
 }

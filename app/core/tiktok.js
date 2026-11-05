@@ -51,6 +51,7 @@ class TikTok {
       ...(agent ? { webClientOptions: { agent: { http: agent, https: agent } }, wsClientOptions: { agent } } : {}) });
     this.conn = conn;
     this.set({ state: 'connecting', message: `Đang kết nối @${username}…`, username });
+    this.on.log('sys', `Bắt đầu kết nối @${username}${agent ? ' qua proxy' : ''}${key ? ' (có Euler key)' : ''}`);
     const E = WebcastEvent || {}; const C = ControlEvent || {};
     conn.on(E.MEMBER || 'member', d => { const u = this.user(d); this.on.log('join', `${u.nickname || u.uniqueId} vào phòng`); this.on.join(u); });
     conn.on(E.CHAT || 'chat', d => { const u = this.user(d); const t = d.content ?? d.comment ?? ''; this.on.log('chat', `${u.nickname || u.uniqueId}: ${t}`); this.on.chat(u, t); });
@@ -69,6 +70,7 @@ class TikTok {
     try {
       let to;
       const st = await Promise.race([conn.connect(), new Promise((_, rej) => { to = setTimeout(() => rej(new Error('TIMEOUT')), 35000); })]).finally(() => clearTimeout(to));
+      this.on.log('sys', 'TikTok: đã vào phòng, đang nhận sự kiện');
       this.retry = 0;
       this.set({ state: 'connected', message: `Đã kết nối @${username}` + (st && st.roomId ? ` (room ${st.roomId})` : ''), roomId: st && st.roomId });
       this.on.log('sys', `Đã kết nối TikTok LIVE @${username}`);

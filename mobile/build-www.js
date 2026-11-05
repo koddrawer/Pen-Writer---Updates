@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
 const { assembleWww, assembleCore } = require('./node/build-lib.js');
 
 const mobileDir = __dirname;
-const appDir = path.resolve(process.argv[2] || path.join(mobileDir, '..', 'app'));
+const appDir = path.resolve(process.argv.slice(2).find(a => !a.startsWith('--')) || path.join(mobileDir, '..', 'app'));
 const www = path.join(mobileDir, 'www');
 const nodeOut = path.join(www, 'nodejs');
 
