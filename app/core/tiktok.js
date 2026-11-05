@@ -1,5 +1,7 @@
 // Kết nối TikTok LIVE (tiktok-live-connector) + chuẩn hoá sự kiện, tự kết nối lại.
 // tiktok-live-connector 2.x là ES Module: Electron 33 không require() được -> nạp bằng import() động
+// Node 18 (Android) chưa có biến toàn cục crypto (Web Crypto) mà thư viện TikTok dùng (crypto.getRandomValues)
+if (!globalThis.crypto) { try { globalThis.crypto = require('crypto').webcrypto; } catch { } }
 let libP = null;
 function loadLib(req) {
   if (!libP) libP = (async () => {
