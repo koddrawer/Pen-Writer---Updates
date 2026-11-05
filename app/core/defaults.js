@@ -20,7 +20,7 @@ const tier = (id, name, min, sizeCm, ornament, sec, extra = {}) => ({
 
 module.exports = {
   configVersion: 5,
-  tiktok: { username: '', signApiKey: '', autoConnect: false, autoReconnect: true },
+  tiktok: { username: '', signApiKey: '', proxy: '', autoConnect: false, autoReconnect: true },
   fonts: [
     builtinFont('great-vibes', 'Great Vibes (chữ ký)', 'great-vibes', 400),
     builtinFont('pinyon', 'Pinyon Script (thư pháp)', 'pinyon-script', 400),

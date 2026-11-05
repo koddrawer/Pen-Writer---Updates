@@ -77,7 +77,8 @@ const ff = (id) => `"pw-${id}", serif`;
 // ================= TAB: Tổng quan
 const live = {};
 function renderHome() {
-  const user = h('input', { type: 'text', placeholder: 'username TikTok (không cần @)' }); user.value = cfg.tiktok.username || '';
+  const user = h('input', { type: 'text', placeholder: 'username TikTok (không cần @)' });
+  const netBox = h('div', { class: 'hint', style: 'font-size:12px;line-height:1.5' }); user.value = cfg.tiktok.username || '';
   user.onchange = () => setPath('tiktok.username', user.value.trim().replace(/^@/, ''));
   live.tikMsg = h('div', { class: 'hint' }, '—');
   live.kpi = h('div', { class: 'kpis' }); live.queue = h('div', { class: 'list' });
@@ -96,9 +97,14 @@ function renderHome() {
       field('tiktok.autoConnect', 'Tự kết nối khi mở app', 'bool'),
       field('tiktok.autoReconnect', 'Tự kết nối lại khi rớt', 'bool'),
       field('tiktok.signApiKey', 'Euler API key (tuỳ chọn)', 'text', { ph: 'để trống nếu không có', tip: 'Khoá ký của eulerstream.com giúp kết nối ổn định hơn' }),
+      field('tiktok.proxy', 'Proxy (tuỳ chọn)', 'text', { ph: 'http://user:pass@ip:port hoặc ip:port', tip: 'Proxy HTTP cho kết nối TikTok của app. Điện thoại/cloud phone cài proxy trong Android thì nhập lại proxy đó ở đây.' }),
       h('div', { class: 'btns' }, btn('Kết nối', async () => { await setPath('tiktok.username', user.value.trim().replace(/^@/, '')); api.invoke('tiktok:connect', user.value); }, 'pri'),
-        btn('Ngắt', () => api.invoke('tiktok:disconnect'), 'red')),
-      live.tikMsg, note('Nhập username của tài khoản đang LIVE. App nhận quà tặng của phiên live và viết tên người tặng lên giấy.')),
+        btn('Ngắt', () => api.invoke('tiktok:disconnect'), 'red'), btn('Kiểm tra mạng', async (ev) => {
+          const b = ev.currentTarget; b.disabled = true; netBox.textContent = 'Đang kiểm tra (tối đa ~40 giây)…';
+          try { const r = await api.invoke('net:test'); netBox.replaceChildren(...r.map(x => h('div', {}, `${x.ok ? '✅' : '❌'} ${x.name}: ${x.info || ''}${x.ms != null ? ` (${x.ms} ms)` : ''}`))); }
+          catch (e) { netBox.textContent = 'Lỗi: ' + (e.message || e); } finally { b.disabled = false; }
+        })),
+      live.tikMsg, netBox, note('Nhập username của tài khoản đang LIVE. App nhận quà tặng của phiên live và viết tên người tặng lên giấy.')),
     card('Trạng thái', live.kpi, live.writing,
       row('Tạm dừng bút', h('label', { class: 'switch' }, paused, h('span'))),
       h('div', { class: 'btns' }, btn('Thay tờ giấy mới', () => api.invoke('paper:new'), 'pri'), btn('Xoá trắng tờ hiện tại', () => api.invoke('paper:clear')),

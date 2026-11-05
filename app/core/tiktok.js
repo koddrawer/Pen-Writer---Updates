@@ -10,6 +10,13 @@ function loadLib(req) {
   })().catch(e => { libP = null; throw e; });
   return libP;
 }
+// proxy cho kết nối TikTok (http://user:pass@ip:port). Lõi Node trên điện thoại không tự dùng proxy cài trong Android.
+function proxyAgent(req, url) {
+  url = String(url || '').trim(); if (!url) return null;
+  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+  const m = req('https-proxy-agent'); const A = m.HttpsProxyAgent || m.default || m;
+  return new A(url);
+}
 class TikTok {
   constructor(req, getCfg, on) {
     this.req = req; this.cfg = getCfg; this.on = on;
@@ -33,7 +40,15 @@ class TikTok {
     try { lib = await loadLib(this.req); } catch (e) { this.set({ state: 'error', message: 'Thiếu thư viện tiktok-live-connector: ' + e.message }); return false; }
     const { TikTokLiveConnection, WebcastEvent, ControlEvent } = lib;
     const key = this.cfg().tiktok.signApiKey;
-    const conn = new TikTokLiveConnection(username, { ...(key ? { signApiKey: key } : {}), enableExtendedGiftInfo: false, processInitialData: false });
+    let agent = null;
+    try { agent = proxyAgent(this.req, this.cfg().tiktok.proxy); } catch (e) { this.set({ state: 'error', message: 'Proxy không hợp lệ: ' + e.message }); return false; }
+    // máy chủ ký Euler: thêm thời gian chờ (mặc định không có -> treo mãi "Đang kết nối") + proxy
+    if (lib.SignConfig) {
+      lib.SignConfig.baseOptions = { ...(lib.SignConfig.baseOptions || {}), timeout: 15000, ...(agent ? { httpsAgent: agent, proxy: false } : { httpsAgent: undefined }) };
+      lib.SignConfig.cachedInstance = undefined;
+    }
+    const conn = new TikTokLiveConnection(username, { ...(key ? { signApiKey: key } : {}), enableExtendedGiftInfo: false, processInitialData: false,
+      ...(agent ? { webClientOptions: { agent: { http: agent, https: agent } }, wsClientOptions: { agent } } : {}) });
     this.conn = conn;
     this.set({ state: 'connecting', message: `Đang kết nối @${username}…`, username });
     const E = WebcastEvent || {}; const C = ControlEvent || {};
@@ -52,20 +67,24 @@ class TikTok {
     });
     conn.on(C.ERROR || 'error', (e) => { this.on.log('err', 'TikTok: ' + (e && (e.message || e.info || JSON.stringify(e)).slice(0, 200))); });
     try {
-      const st = await conn.connect();
+      let to;
+      const st = await Promise.race([conn.connect(), new Promise((_, rej) => { to = setTimeout(() => rej(new Error('TIMEOUT')), 35000); })]).finally(() => clearTimeout(to));
       this.retry = 0;
       this.set({ state: 'connected', message: `Đã kết nối @${username}` + (st && st.roomId ? ` (room ${st.roomId})` : ''), roomId: st && st.roomId });
       this.on.log('sys', `Đã kết nối TikTok LIVE @${username}`);
       return true;
     } catch (e) {
       const msg = (e && e.message) || String(e);
-      const why = /offline|not.*live|UserOffline/i.test(msg) ? `@${username} đang không live`
+      const why = msg === 'TIMEOUT' || /ETIMEDOUT|timeout of|Timeout awaiting|ECONNRESET|ECONNREFUSED|ENOTFOUND|socket hang up|EAI_AGAIN/i.test(msg)
+          ? `Không vào được TikTok/máy chủ ký Euler (mạng hoặc proxy chặn/quá chậm${/ENOTFOUND|EAI_AGAIN/.test(msg) ? ', lỗi DNS' : ''}). Bấm "Kiểm tra mạng"; nếu điện thoại dùng proxy, nhập proxy vào ô Proxy.`
+        : /offline|not.*live|UserOffline/i.test(msg) ? `@${username} đang không live`
         : /Business plan|PremiumFeature|requires a .* plan/i.test(msg) ? 'Máy chủ ký Euler từ chối (tính năng trả phí). Thử lại sau ít phút hoặc nhập Euler API key.'
         : /rate.?limit|429/i.test(msg) ? 'Máy chủ ký Euler đang giới hạn lượt (gói miễn phí). Chờ chút rồi thử lại hoặc nhập Euler API key.'
         : /Room ID/i.test(msg) ? `Không lấy được phòng live của @${username} – kiểm tra tài khoản đang LIVE và đúng username`
         : 'Lỗi: ' + msg.slice(0, 160);
       this.set({ state: 'error', message: why });
       this.on.log('err', 'Kết nối thất bại: ' + msg.slice(0, 200));
+      try { conn.disconnect(); } catch { }
       if (!this.manual) this.schedule();
       return false;
     }
@@ -108,4 +127,24 @@ class TikTok {
     if (!internal) this.set({ state: 'disconnected', message: 'Đã ngắt kết nối' });
   }
 }
-module.exports = { TikTok };
+// kiểm tra mạng từ lõi Node (đúng đường đi của kết nối TikTok, có proxy nếu đã nhập)
+async function netTest(req, proxy) {
+  const https = require('https');
+  let agent = null; try { agent = proxyAgent(req, proxy); } catch (e) { return [{ name: 'Proxy', ok: false, info: 'không hợp lệ: ' + e.message }]; }
+  const get = (url) => new Promise((res) => {
+    const t0 = Date.now();
+    const r = https.get(url, { agent: agent || undefined, timeout: 10000, headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 13) Chrome/124 Mobile Safari/537.36' } }, (rs) => {
+      let body = ''; rs.on('data', d => { if (body.length < 300) body += d; }); rs.on('end', () => res({ ok: rs.statusCode < 500 && rs.statusCode !== 407, ms: Date.now() - t0, status: rs.statusCode, body }));
+    });
+    r.on('timeout', () => { r.destroy(new Error('quá 10 giây không phản hồi')); });
+    r.on('error', (e) => res({ ok: false, ms: Date.now() - t0, info: e.code || e.message }));
+  });
+  const tests = [['IP đang dùng', 'https://api.ipify.org/'], ['TikTok', 'https://www.tiktok.com/'], ['TikTok LIVE (webcast)', 'https://webcast.tiktok.com/webcast/setting/'], ['Máy chủ ký Euler', 'https://api.eulerstream.com/']];
+  const out = [];
+  for (const [name, url] of tests) {
+    const r = await get(url);
+    out.push({ name, ok: r.ok, ms: r.ms, info: r.info || (r.status === 407 ? 'proxy sai user/mật khẩu (HTTP 407)' : name === 'IP đang dùng' && r.ok ? String(r.body).trim().slice(0, 45) : 'HTTP ' + r.status) });
+  }
+  return out;
+}
+module.exports = { TikTok, netTest };

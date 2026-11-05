@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const DEFAULTS = require('./defaults.js');
 const { deepMerge, migrateConfig, uid, imgExt } = require('./shared.js');
 const { JobQueue } = require('./queue.js');
-const { TikTok } = require('./tiktok.js');
+const { TikTok, netTest } = require('./tiktok.js');
 const { TTS } = require('./tts.js');
 const { startServer } = require('./server.js');
 const { MobileUpdater } = require('./updater-mobile.js');
@@ -77,6 +77,7 @@ module.exports = async function start(ctx) {
     'queue:remove': (id) => queue.remove(id),
     'queue:clear': (w) => queue.clear(w),
     'queue:pause': (v) => queue.setPaused(v),
+    'net:test': () => netTest(req, cfg.tiktok.proxy),
     'test:chat': (text) => { const n = ['An', 'Bình', 'Chi', 'Dũng', 'Hà', 'Khoa'][Math.floor(Math.random() * 6)]; emit('chat:msg', { type: 'chat', name: n + ' ' + Math.floor(Math.random() * 99), id: 'test_' + Math.random().toString(36).slice(2, 7), avatar: cfg.testAvatar || '', text: text || 'Xin chào mọi người!' }); },
     'test:gift': (o = {}) => {
       const g = { user: { uniqueId: 'test_' + Math.random().toString(36).slice(2, 7), nickname: o.name || 'Người tặng ' + Math.floor(Math.random() * 999), avatar: cfg.testAvatar || '' }, gift: o.gift || 'Rose', count: o.count || 1, diamonds: o.diamonds ?? 1 };
