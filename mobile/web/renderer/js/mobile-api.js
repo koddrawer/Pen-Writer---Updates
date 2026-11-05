@@ -142,6 +142,7 @@
     port = info.port || port;
     if (await switchWww(info.www)) return;       // trang sẽ tự tải lại
     resolveReady(info);
+    raw('send', ['display:log', { kind: 'sys', text: 'Âm thanh phát bằng ' + (window.__nativeAudio ? 'trình phát Android (TikTok thu được)' : 'WebView – cần cài APK mới để TikTok thu được tiếng') }]);
   }
 
   async function link() {

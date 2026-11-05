@@ -4,6 +4,9 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
@@ -29,7 +32,8 @@ public class MainActivity extends BridgeActivity {
             note("crash-java.txt", "Thread " + t.getName() + ": " + sw);
             if (prev != null) prev.uncaughtException(t, e);
         });
-        registerPlugin(NativeAudioPlugin.class);   // âm thanh phát bằng MediaPlayer để TikTok thu được
+        registerPlugin(NativeAudioPlugin.class);
+        allowCapture();   // âm thanh phát bằng MediaPlayer để TikTok thu được
         super.onCreate(savedInstanceState);
         // WebView (màn hiển thị) bị hệ thống tắt vì thiếu RAM/GPU: mặc định Capacitor để app văng ra.
         // Ở đây ghi lại rồi tự mở lại app sau 1 giây.
@@ -88,4 +92,14 @@ public class MainActivity extends BridgeActivity {
         finishAffinity();
         android.os.Process.killProcess(android.os.Process.myPid());
     }
+
+    // cho phép app khác (TikTok live chia sẻ màn hình) thu âm thanh của app – đặt cho cả ứng dụng
+    private void allowCapture() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            try { ((AudioManager) getSystemService(Context.AUDIO_SERVICE)).setAllowedCapturePolicy(AudioAttributes.ALLOW_CAPTURE_BY_ALL); } catch (Exception ignored) { }
+        }
+    }
+
+    @Override
+    public void onResume() { super.onResume(); allowCapture(); }
 }

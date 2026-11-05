@@ -69,7 +69,9 @@ public class NativeAudioPlugin extends Plugin {
             if (old != null) { p.vol = old.vol; p.rate = old.rate; }
             players.put(id, p);
             try {
-                p.mp.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
+                AudioAttributes.Builder ab = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC);
+                if (Build.VERSION.SDK_INT >= 29) ab.setAllowedCapturePolicy(AudioAttributes.ALLOW_CAPTURE_BY_ALL);   // cho app khác (TikTok) thu tiếng
+                p.mp.setAudioAttributes(ab.build());
                 p.mp.setDataSource(url);
                 p.mp.setOnPreparedListener(m -> {
                     if (players.get(id) != p) return;

@@ -1,7 +1,7 @@
 {
-  "version": "1.13.7",
+  "version": "1.13.8",
   "minShell": "1.0.0",
-  "notes": "Android: nhạc nền, voice và truyện phát bằng trình phát của Android để TikTok live chia sẻ màn hình thu được tiếng (cần APK 1.0.5)",
+  "notes": "Android: cho phép TikTok thu âm thanh của app ở mức toàn ứng dụng; nhật ký báo app đang phát âm thanh bằng trình phát nào (APK 1.0.6)",
   "date": "2026-11-05",
   "minAndroid": "1.0.0"
 }
