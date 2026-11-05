@@ -38,6 +38,8 @@ function assembleWww(appDir, mobileDir, out) {
 function assembleCore(appDir, mobileDir, out) {
   fs.mkdirSync(out, { recursive: true });
   for (const f of CORE_SHARED) fs.copyFileSync(path.join(appDir, 'core', f), path.join(out, f));
+  // thư viện đóng gói sẵn (CommonJS) – ví dụ tiktok-live-connector cho Node trên Android
+  if (fs.existsSync(path.join(appDir, 'core', 'vendor'))) cp(path.join(appDir, 'core', 'vendor'), path.join(out, 'vendor'));
   for (const f of CORE_MOBILE) fs.copyFileSync(path.join(mobileDir, 'node', f), path.join(out, f));
   fs.copyFileSync(path.join(appDir, 'version.json'), path.join(out, 'version.json'));
 }

@@ -15,3 +15,4 @@
 - Cập nhật nóng: điện thoại tải zip repo, ghép `updates/<ver>/{www,core}`; chỉ nhận khi `minAndroid` ≤ bản APK.
 - APK build trên GitHub Actions (`.github/workflows/android.yml`, nguồn ở `mobile/ci/android.yml`) khi đổi `mobile/package.json`, `mobile/android/**`, `mobile/node/main.js|package.json`; đăng ở Releases tag `android-v<ver>`.
 - Đổi phần native/main.js/thư viện npm của lõi Node: tăng `mobile/package.json` version + `minAndroid` (env `MIN_ANDROID` khi publish).
+- `app/core/vendor/tiktok-live-connector.cjs`: bản CommonJS đóng gói bằng esbuild (`tools/bundle-ttlc.sh`) – Node 18 trên Android văng app khi `import()` ES Module. Nâng cấp tiktok-live-connector thì chạy lại script này.

@@ -3,6 +3,11 @@
 let libP = null;
 function loadLib(req) {
   if (!libP) libP = (async () => {
+    // Android (Node 18 của nodejs-mobile): nạp ES Module bằng import() làm văng app -> dùng bản đóng gói CommonJS (vendor/, tạo bằng esbuild)
+    if (process.platform === 'android') {
+      const p = require('path').join(__dirname, 'vendor', 'tiktok-live-connector.cjs');
+      if (require('fs').existsSync(p)) return require(p);
+    }
     try { return req('tiktok-live-connector'); } catch (e) { if (e.code !== 'ERR_REQUIRE_ESM' && !/ES Module/i.test(e.message)) throw e; }
     const { pathToFileURL } = require('url');
     const m = await import(pathToFileURL(req.resolve('tiktok-live-connector')).href);
@@ -37,6 +42,7 @@ class TikTok {
     await this.disconnect(true);
     this.manual = false; this.username = username;
     let lib;
+    this.on.log('sys', 'Đang nạp thư viện TikTok…');
     try { lib = await loadLib(this.req); } catch (e) { this.set({ state: 'error', message: 'Thiếu thư viện tiktok-live-connector: ' + e.message }); return false; }
     const { TikTokLiveConnection, WebcastEvent, ControlEvent } = lib;
     const key = this.cfg().tiktok.signApiKey;
