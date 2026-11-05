@@ -1,7 +1,7 @@
 {
-  "version": "1.13.8",
+  "version": "1.13.9",
   "minShell": "1.0.0",
-  "notes": "Android: cho phép TikTok thu âm thanh của app ở mức toàn ứng dụng; nhật ký báo app đang phát âm thanh bằng trình phát nào (APK 1.0.6)",
+  "notes": "Giới hạn khung hình (Android mặc định 30 fps) để máy yếu/cloud phone còn CPU cho TikTok thu tiếng – hết nhạc giật trên live; thêm Độ nét render cho Android",
   "date": "2026-11-05",
   "minAndroid": "1.0.0"
 }

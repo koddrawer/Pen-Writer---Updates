@@ -321,7 +321,12 @@ function render() {
 // ---------- vòng lặp
 const clock = new THREE.Clock();
 let fpsT = 0, frames = 0;
-function frame() {
+// giới hạn khung hình/giây: máy yếu / cloud phone dành CPU cho TikTok thu hình + thu tiếng (không thì nhạc trên live bị giật)
+let lastF = 0;
+function frame(now = performance.now()) {
+  const mf = +cfg.display.maxFps || 0;
+  if (mf > 0 && now - lastF < 1000 / mf - 3) return;
+  lastF = now;
   const raw = clock.getDelta(); const dt = Math.min(raw, 0.1);
   writer.tick(Math.min(raw, 0.25));   // máy yếu/khựng: bút vẫn viết đúng tốc độ
   desk.update(dt, performance.now());

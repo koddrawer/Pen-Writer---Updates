@@ -201,6 +201,7 @@ module.exports = {
       queue: { enabled: true, x: 0.04, y: 0.04, w: 0.44, h: 0.26, bg: 0.45, blur: 8, font: 1, rows: 6, showViewers: true },
       chat: { enabled: true, x: 0.04, y: 0.64, w: 0.62, h: 0.3, bg: 0.4, blur: 8, font: 1, rows: 30, gifts: true, joins: false },
     },
+    maxFps: 0,              // 0 = không giới hạn; Android mặc định 30
     gpuBoost: true,         // chạy kèm --ignore-gpu-blocklist --enable-gpu-rasterization (dùng GPU thay CPU)
     mouseCamera: true, followPen: 0, cameras: {}, dragWindow: false,
     penPark: { u: 0.1, v: 0.9, h: 0.04 },

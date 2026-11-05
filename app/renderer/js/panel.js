@@ -558,6 +558,8 @@ function renderDisplay() {
       field('display.cycle.donorShot', 'Khi viết tên donate', 'select', { options: () => [['none', 'Vẫn đổi góc bình thường'], ['main', 'Giữ góc chính (đã lưu)'], ...(cfg.display.shots || []).map(x => [x.id, 'Giữ ' + (x.name || 'góc')])] }),
       note('Chỉnh camera bằng tay thì tự đổi góc tạm dừng 20 giây. Bỏ tích ô cạnh tên để tạm bỏ một góc khỏi vòng đổi.')),
     card('Ánh sáng & chất lượng',
+      field('display.maxFps', 'Giới hạn khung hình', 'select', { options: [[0, 'Không giới hạn'], [60, '60 fps'], [30, '30 fps (nhẹ máy)'], [24, '24 fps (rất nhẹ)']], num: true, tip: 'Máy yếu / cloud phone: để 30 hoặc 24 để TikTok còn CPU thu hình và thu tiếng – nhạc trên live hết giật' }),
+      api.platform === 'android' ? field('display.renderScale', 'Độ nét render', 'range', { min: 0.5, max: 2, step: 0.25, unit: '×', tip: 'Cloud phone yếu: để 0.75' }) : null,
       field('display.sun', 'Nắng qua cửa sổ', 'range', { min: 0, max: 2.5, step: 0.05, unit: '×' }),
       field('display.ambient', 'Ánh sáng phòng', 'range', { min: 0, max: 2.5, step: 0.05, unit: '×' }),
       field('display.lamp', 'Đèn bàn ấm', 'bool'),

@@ -25,6 +25,7 @@ module.exports = async function start(ctx) {
   let saved = {};
   try { saved = JSON.parse(fs.readFileSync(cfgFile, 'utf8')); } catch { }
   if (!saved.display || saved.display.mouseCamera === undefined) saved = deepMerge(saved, { display: { mouseCamera: false } });
+  if (!saved.display || saved.display.maxFps === undefined) saved = deepMerge(saved, { display: { maxFps: 30 } });
   let cfg = migrateConfig(DEFAULTS, saved);
   cfg.platform = 'android';
   let saveT = null;
