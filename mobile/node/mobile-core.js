@@ -30,10 +30,17 @@ module.exports = async function start(ctx) {
   let saveT = null;
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => fs.writeFile(cfgFile, JSON.stringify(cfg, null, 1), () => { }), 300); };
   const getCfg = () => cfg;
+  // proxy cho mọi kết nối mạng của lõi Node (cập nhật, TikTok, giọng đọc, avatar)
+  const { applyProxy } = require('./netproxy.js');
+  function applyNet() {
+    const r = applyProxy(req, cfg.tiktok.proxy);
+    if (cfg.tiktok.proxy) addLog(r.ok ? 'sys' : 'err', r.ok ? 'Đang dùng proxy cho mạng của app' : 'Proxy chỉ áp được một phần: ' + r.err);
+  }
   const emit = (ch, data) => { try { channel.post('evt', ch, data); } catch { } };
   function setCfg(patch, { silent } = {}) {
     cfg = deepMerge(cfg, patch); save();
     if (patch.update) updater.configure(cfg.update);
+    if (patch.tiktok && 'proxy' in patch.tiktok) applyNet();
     if (!silent) emit('config', cfg);
     return cfg;
   }
@@ -41,6 +48,7 @@ module.exports = async function start(ctx) {
   // ---- nhật ký
   const log = [];
   const addLog = (kind, text) => { const e = { t: Date.now(), kind, text }; log.push(e); if (log.length > 300) log.shift(); emit('log', e); };
+  try { applyNet(); } catch (e) { addLog('err', 'Proxy lỗi: ' + e.message); }
   const onErr = (e) => { try { addLog('err', 'Lỗi: ' + (e && e.message || e)); } catch { } };
   process.on('uncaughtException', onErr); process.on('unhandledRejection', onErr);
 

@@ -97,7 +97,7 @@ function renderHome() {
       field('tiktok.autoConnect', 'Tự kết nối khi mở app', 'bool'),
       field('tiktok.autoReconnect', 'Tự kết nối lại khi rớt', 'bool'),
       field('tiktok.signApiKey', 'Euler API key (tuỳ chọn)', 'text', { ph: 'để trống nếu không có', tip: 'Khoá ký của eulerstream.com giúp kết nối ổn định hơn' }),
-      field('tiktok.proxy', 'Proxy (tuỳ chọn)', 'text', { ph: 'http://user:pass@ip:port hoặc ip:port', tip: 'Proxy HTTP cho kết nối TikTok của app. Điện thoại/cloud phone cài proxy trong Android thì nhập lại proxy đó ở đây.' }),
+      field('tiktok.proxy', 'Proxy mạng của app (tuỳ chọn)', 'text', { ph: 'http://user:pass@ip:port hoặc ip:port', tip: 'Proxy HTTP cho mọi kết nối của app (TikTok, cập nhật, giọng đọc, avatar). Điện thoại/cloud phone cài proxy trong Android thì nhập lại proxy đó ở đây.' }),
       h('div', { class: 'btns' }, btn('Kết nối', async () => { await setPath('tiktok.username', user.value.trim().replace(/^@/, '')); api.invoke('tiktok:connect', user.value); }, 'pri'),
         btn('Ngắt', () => api.invoke('tiktok:disconnect'), 'red'), btn('Kiểm tra mạng', async (ev) => {
           const b = ev.currentTarget; b.disabled = true; netBox.textContent = 'Đang kiểm tra (tối đa ~40 giây)…';

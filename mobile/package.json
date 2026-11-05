@@ -1,8 +1,8 @@
 {
   "name": "pen-writer-mobile",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
-  "description": "Pen Writer cho Android (Capacitor + Node.js trên điện thoại)",
+  "description": "Pen Writer cho Android (Capacitor + Node.js tr\u00ean \u0111i\u1ec7n tho\u1ea1i)",
   "scripts": {
     "build:www": "node build-www.js",
     "sync": "node build-www.js && npx cap sync android"

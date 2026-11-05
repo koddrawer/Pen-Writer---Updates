@@ -41,6 +41,7 @@ module.exports = async function start(ctx) {
   function setCfg(patch, { silent } = {}) {
     cfg = deepMerge(cfg, patch); save();
     if (patch.update) ctx.updater.configure(cfg.update);
+    if (patch.tiktok && 'proxy' in patch.tiktok) { try { require('./netproxy.js').applyProxy(ctx.require, cfg.tiktok.proxy); } catch { } }
     if (patch.voice && (patch.voice.engine === 'vieneu' || patch.voice.vieneu) && cfg.voice.engine === 'vieneu' && (cfg.voice.vieneu || {}).autoStart !== false && typeof vnStart === 'function') setTimeout(() => { try { vnStart(); } catch { } }, 300);
     if (!silent) broadcast('config', cfg);
     applyWindowCfg();
